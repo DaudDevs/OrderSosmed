@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User
+  MessageSquare, User, Search
 } from 'lucide-react';
 
 // ==========================================
@@ -162,6 +162,9 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+  
+  // STATE BARU: Pencarian
+  const [searchTerm, setSearchTerm] = useState('');
 
   const getVal = (item, keys) => {
     if (!item) return null;
@@ -170,23 +173,43 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   };
 
   const validServices = Array.isArray(services) ? services : [];
+  
+  // Keys Config
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
   const srvNameKeys = ['name', 'service_name', 'layanan'];
   const priceKeys = ['price', 'rate', 'harga'];
 
-  const categories = [];
-  const seenCats = new Set();
-  validServices.forEach(item => {
-      let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
-      let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
-      if (cId && !seenCats.has(String(cId))) { seenCats.add(String(cId)); categories.push({ id: cId, name: cName }); }
+  // --- LOGIKA FILTER PENCARIAN ---
+  // 1. Filter semua layanan berdasarkan kata kunci (Search Term)
+  const searchedServices = validServices.filter(s => {
+      if (!searchTerm) return true; // Kalau gak cari apa-apa, tampilkan semua
+      const term = searchTerm.toLowerCase();
+      const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
+      const cName = (getVal(s, catNameKeys) || '').toLowerCase();
+      const sId = String(getVal(s, srvIdKeys) || '');
+      // Cari di Nama Layanan, Nama Kategori, atau ID Layanan
+      return sName.includes(term) || cName.includes(term) || sId.includes(term);
   });
 
-  const filteredServices = validServices.filter(s => {
+  // 2. Buat Daftar Kategori HANYA dari layanan yang sudah difilter di atas
+  const categories = [];
+  const seenCats = new Set();
+  searchedServices.forEach(item => {
+      let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
+      let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
+      if (cId && !seenCats.has(String(cId))) { 
+          seenCats.add(String(cId)); 
+          categories.push({ id: cId, name: cName }); 
+      }
+  });
+
+  // 3. Filter Layanan Akhir berdasarkan Kategori yang dipilih
+  const filteredServices = searchedServices.filter(s => {
       let sCatId = getVal(s, catIdKeys) || getVal(s, catNameKeys);
-      return String(sCatId) === String(selectedCatId);
+      // Jika kategori dipilih, filter by kategori. Jika belum, tampilkan kosong (biar user pilih kategori dulu)
+      return selectedCatId ? String(sCatId) === String(selectedCatId) : false;
   });
 
   const currentService = validServices.find(s => String(getVal(s, srvIdKeys)) === String(selectedServiceId));
@@ -214,34 +237,61 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
       <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
         {message && <div className={`p-4 mb-6 rounded-xl text-sm border ${message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>{message.text}</div>}
+        
         <form onSubmit={handleSubmit} className="space-y-4">
-           <div>
-              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori</label>
-              <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
-                  <option value="">-- Pilih Kategori --</option>
-                  {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
-              </select>
+           {/* --- FITUR SEARCH BARU --- */}
+           <div className="relative">
+              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
+              <div className="relative">
+                  <input 
+                    type="text" 
+                    className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
+                    placeholder="Ketik nama layanan (misal: Instagram Like)..." 
+                    value={searchTerm}
+                    onChange={e => {
+                        setSearchTerm(e.target.value); 
+                        setSelectedCatId(''); // Reset kategori saat mengetik agar user memilih ulang dari hasil filter
+                        setSelectedServiceId('');
+                    }} 
+                  />
+                  <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
+              </div>
            </div>
-           <div>
-              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
-              <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
-                  <option value="">-- Pilih Layanan --</option>
-                  {filteredServices.map((s, i) => {
-                      const id = getVal(s, srvIdKeys);
-                      const name = getVal(s, srvNameKeys);
-                      return <option key={i} value={id}>{name}</option>
-                  })}
-              </select>
+
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="md:col-span-2">
+                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
+                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
+                      <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
+                      {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
+                  </select>
+               </div>
+               <div className="md:col-span-2">
+                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
+                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
+                      <option value="">-- Pilih Layanan --</option>
+                      {filteredServices.map((s, i) => {
+                          const id = getVal(s, srvIdKeys);
+                          const name = getVal(s, srvNameKeys);
+                          const price = parseFloat(getVal(s, priceKeys) || 0);
+                          const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
+                          // Tampilkan ID dan Harga di Dropdown biar informatif
+                          return <option key={i} value={id}>ID:{id} - {name} - Rp {sellPrice.toLocaleString()}</option>
+                      })}
+                  </select>
+               </div>
            </div>
+
            {currentService && (
-             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200">
+             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200 animate-fade-in">
                 <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
                 <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
-                    <span className="text-slate-400">Pusat: <span className="line-through">Rp {modalPrice.toLocaleString()}</span></span>
-                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga Kamu: Rp {sellingPricePer1k.toLocaleString('id-ID')} / 1k</span>
+                    <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
+                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: Rp {sellingPricePer1k.toLocaleString('id-ID')} / 1k</span>
                 </div>
              </div>
            )}
+
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Target</label>
@@ -401,7 +451,7 @@ const LoginPage = () => {
         <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
             <div className="w-full max-w-sm bg-[#1e293b] border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-1">PANEL.</h1>
+                    <h1 className="text-3xl font-bold text-white mb-1">SosmedKu</h1>
                     <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
                 </div>
                 <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
@@ -499,7 +549,7 @@ const App = () => {
        {/* MOBILE SIDEBAR OVERLAY */}
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>PANEL.</span>
+             <span>Sosmedku</span>
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
