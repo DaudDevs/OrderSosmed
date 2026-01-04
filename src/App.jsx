@@ -367,7 +367,7 @@ const DepositView = () => (
                 <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs">3</div><p className="text-slate-300">Pilih menu <b>Bayar / Scan</b>, lalu upload gambar dari galeri.</p></div>
             </div>
 
-            <button onClick={() => window.open('https://wa.me/628123456789?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20">
+            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20">
                 <MessageSquare size={18}/> Kirim Bukti via WhatsApp
             </button>
         </div>

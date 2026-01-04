@@ -2,49 +2,67 @@
 import axios from 'axios';
 
 export default async function handler(req, res) {
-  // 1. Ambil data rahasia dari Environment Server
-  const CREDENTIALS = {
-    api_id: process.env.SMM_API_ID,
-    api_key: process.env.SMM_API_KEY,
-    secret_key: process.env.SMM_SECRET_KEY,
-  };
+  // Tambahkan Header CORS agar tidak diblokir browser
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
 
-  const TARGET_URL = process.env.SMM_BASE_URL; // URL Pusat (tanpa /api-proxy)
+  // Tangani Request OPTIONS (Pre-flight check dari browser)
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
-  // 2. Cek Method
+  // Cek apakah Method POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ msg: 'Method not allowed' });
+    return res.status(405).json({ msg: 'Method Not Allowed' });
   }
 
   try {
-    // 3. Gabungkan data dari Frontend dengan Kunci Rahasia
-    const { endpoint, ...frontendData } = req.body;
-    
-    // Tentukan URL tujuan berdasarkan request frontend
-    // Misal: frontend minta 'profile', kita tembak ke 'https://pusat.com/profile'
-    const finalUrl = `${TARGET_URL}/${endpoint}`; 
+    // 1. Ambil data Environment Variables
+    const API_ID = process.env.SMM_API_ID;
+    const API_KEY = process.env.SMM_API_KEY;
+    const SECRET_KEY = process.env.SMM_SECRET_KEY;
+    const BASE_URL = process.env.SMM_BASE_URL;
 
-    const formData = new URLSearchParams();
-    // Masukkan Credentials
-    formData.append('api_id', CREDENTIALS.api_id);
-    formData.append('api_key', CREDENTIALS.api_key);
-    formData.append('secret_key', CREDENTIALS.secret_key);
+    // Debugging (Cek apakah Env terbaca di Server Logs)
+    console.log("Debug Env:", { API_ID_Exists: !!API_ID, URL: BASE_URL });
+
+    if (!API_ID || !API_KEY || !BASE_URL) {
+      throw new Error("Environment Variables Belum Lengkap!");
+    }
+
+    // 2. Siapkan Data
+    const { endpoint, ...frontendData } = req.body;
+    const targetUrl = `${BASE_URL}/${endpoint}`;
     
-    // Masukkan data dari frontend (service id, target, quantity, action, dll)
+    const formData = new URLSearchParams();
+    formData.append('api_id', API_ID);
+    formData.append('api_key', API_KEY);
+    formData.append('secret_key', SECRET_KEY);
+    
     Object.keys(frontendData).forEach(key => {
         formData.append(key, frontendData[key]);
     });
 
-    // 4. Tembak ke Pusat (Server to Server)
-    const response = await axios.post(finalUrl, formData, {
+    // 3. Tembak ke Pusat
+    const response = await axios.post(targetUrl, formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
 
-    // 5. Kembalikan hasil ke Frontend
+    // 4. Balas ke Frontend
     return res.status(200).json(response.data);
 
   } catch (error) {
-    console.error("Proxy Error:", error.message);
-    return res.status(500).json({ status: false, data: { msg: "Server Error" } });
+    console.error("Proxy Error Full:", error);
+    return res.status(500).json({ 
+        status: false, 
+        msg: "Server Error", 
+        error_detail: error.message 
+    });
   }
 }
