@@ -22,6 +22,17 @@ const LOCAL_CREDENTIALS = {
 const CONFIG = { PROFIT_PERCENTAGE: 20 };
 const ADMIN_USERNAME = 'DaudHanafi'; 
 
+// --- HELPER FORMAT RUPIAH (BARU) ---
+// Fungsi ini memastikan format angka menjadi: "Rp 10.000" (Pakai titik, tanpa koma desimal aneh)
+const formatRupiah = (number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(number);
+};
+
 const callApi = async (endpoint, payload = {}) => {
     if (IS_LOCAL) {
         const params = new URLSearchParams();
@@ -76,7 +87,8 @@ const AdminView = () => {
 
   const handleTopUp = async (e) => {
     e.preventDefault();
-    if (!confirm(`Kirim saldo Rp ${Number(amount).toLocaleString()} ke @${targetUsername}?`)) return;
+    // Update Format Rupiah di Konfirmasi
+    if (!confirm(`Kirim saldo ${formatRupiah(amount)} ke @${targetUsername}?`)) return;
     setLoading(true);
     try {
       const { data: targetUser, error: findError } = await supabase.from('profiles').select('*').eq('username', targetUsername).single();
@@ -111,7 +123,8 @@ const AdminView = () => {
               {users.map(u => (
                 <tr key={u.id} className="hover:bg-slate-800/30">
                   <td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td>
-                  <td className="px-3 py-3 text-green-400 text-xs md:text-sm">Rp {Number(u.balance).toLocaleString()}</td>
+                  {/* Update Format Rupiah */}
+                  <td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td>
                   <td className="px-3 py-3 text-right"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button></td>
                 </tr>
               ))}
@@ -130,7 +143,8 @@ const DashboardView = ({ profile, onNavigate }) => {
         <div className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl p-6 md:p-8 border border-indigo-500/30 shadow-lg bg-gradient-to-br from-indigo-900/40 to-slate-900/40">
             <div className="absolute top-0 right-0 p-3 opacity-10"><CreditCard size={120}/></div>
             <p className="text-indigo-200 font-medium mb-1 text-sm md:text-base">Saldo Tersedia</p>
-            <h3 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-6">Rp {Number(profile.balance || 0).toLocaleString('id-ID')}</h3>
+            {/* Update Format Rupiah */}
+            <h3 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-6">{formatRupiah(profile.balance || 0)}</h3>
             <button onClick={() => onNavigate('deposit')} className="px-5 py-2.5 bg-white hover:bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20"><CreditCard size={16}/> Isi Saldo</button>
         </div>
         <div className="rounded-2xl bg-[#1e293b] border border-slate-700 p-6 flex flex-col justify-center shadow-lg">
@@ -162,8 +176,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
-  
-  // STATE BARU: Pencarian
   const [searchTerm, setSearchTerm] = useState('');
 
   const getVal = (item, keys) => {
@@ -174,26 +186,21 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
 
   const validServices = Array.isArray(services) ? services : [];
   
-  // Keys Config
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
   const srvNameKeys = ['name', 'service_name', 'layanan'];
   const priceKeys = ['price', 'rate', 'harga'];
 
-  // --- LOGIKA FILTER PENCARIAN ---
-  // 1. Filter semua layanan berdasarkan kata kunci (Search Term)
   const searchedServices = validServices.filter(s => {
-      if (!searchTerm) return true; // Kalau gak cari apa-apa, tampilkan semua
+      if (!searchTerm) return true; 
       const term = searchTerm.toLowerCase();
       const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
       const cName = (getVal(s, catNameKeys) || '').toLowerCase();
       const sId = String(getVal(s, srvIdKeys) || '');
-      // Cari di Nama Layanan, Nama Kategori, atau ID Layanan
       return sName.includes(term) || cName.includes(term) || sId.includes(term);
   });
 
-  // 2. Buat Daftar Kategori HANYA dari layanan yang sudah difilter di atas
   const categories = [];
   const seenCats = new Set();
   searchedServices.forEach(item => {
@@ -205,10 +212,8 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
       }
   });
 
-  // 3. Filter Layanan Akhir berdasarkan Kategori yang dipilih
   const filteredServices = searchedServices.filter(s => {
       let sCatId = getVal(s, catIdKeys) || getVal(s, catNameKeys);
-      // Jika kategori dipilih, filter by kategori. Jika belum, tampilkan kosong (biar user pilih kategori dulu)
       return selectedCatId ? String(sCatId) === String(selectedCatId) : false;
   });
 
@@ -239,20 +244,11 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
         {message && <div className={`p-4 mb-6 rounded-xl text-sm border ${message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>{message.text}</div>}
         
         <form onSubmit={handleSubmit} className="space-y-4">
-           {/* --- FITUR SEARCH BARU --- */}
            <div className="relative">
               <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
               <div className="relative">
-                  <input 
-                    type="text" 
-                    className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" 
-                    placeholder="Ketik nama layanan (misal: Instagram Like)..." 
-                    value={searchTerm}
-                    onChange={e => {
-                        setSearchTerm(e.target.value); 
-                        setSelectedCatId(''); // Reset kategori saat mengetik agar user memilih ulang dari hasil filter
-                        setSelectedServiceId('');
-                    }} 
+                  <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
+                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
                   />
                   <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
               </div>
@@ -275,8 +271,8 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
                           const name = getVal(s, srvNameKeys);
                           const price = parseFloat(getVal(s, priceKeys) || 0);
                           const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
-                          // Tampilkan ID dan Harga di Dropdown biar informatif
-                          return <option key={i} value={id}>ID:{id} - {name} - Rp {sellPrice.toLocaleString()}</option>
+                          // Update Format Rupiah di Dropdown
+                          return <option key={i} value={id}>ID:{id} - {name} - {formatRupiah(sellPrice)}</option>
                       })}
                   </select>
                </div>
@@ -287,7 +283,8 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
                 <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
                 <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
                     <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
-                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: Rp {sellingPricePer1k.toLocaleString('id-ID')} / 1k</span>
+                    {/* Update Format Rupiah */}
+                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: {formatRupiah(sellingPricePer1k)} / 1k</span>
                 </div>
              </div>
            )}
@@ -306,7 +303,8 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
            <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
              <div className="text-center md:text-left">
                 <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
-                <p className="text-3xl font-bold text-white tracking-tight">Rp {totalPrice.toLocaleString('id-ID')}</p>
+                {/* Update Format Rupiah */}
+                <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
              </div>
              <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
                {loading ? <Loader2 className="animate-spin mx-auto"/> : 'BELI SEKARANG'}
@@ -319,7 +317,8 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
            <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
            <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
               <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
-              <b className="text-white text-xl">Rp {balance.toLocaleString()}</b>
+              {/* Update Format Rupiah */}
+              <b className="text-white text-xl">{formatRupiah(balance)}</b>
            </div>
            {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
         </div>
@@ -415,7 +414,7 @@ const DepositView = () => (
                 <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">3</div><p className="text-slate-300 text-xs">Scan & Bayar. Min deposit <b>Rp 10.000</b>.</p></div>
             </div>
 
-            <button onClick={() => window.open('https://wa.me/628123456789?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
+            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
                 <MessageSquare size={18}/> Konfirmasi WhatsApp
             </button>
         </div>
@@ -576,7 +575,8 @@ const App = () => {
              <div className="flex items-center gap-4 ml-auto">
                 <div className="text-right">
                     <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
-                    <p className="text-xs text-green-400">Rp {Number(profile?.balance || 0).toLocaleString()}</p>
+                    {/* Update Format Rupiah di Header */}
+                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
                 </div>
              </div>
           </header>
