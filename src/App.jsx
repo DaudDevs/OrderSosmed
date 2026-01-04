@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { supabase } from './supabaseClient';
-// 1. IMPORT LIBRARY TOAST
-import { Toaster, toast } from 'react-hot-toast';
-import {
+import axios from 'axios'; 
+import { supabase } from './supabaseClient'; 
+import { 
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
-  History, Key, CheckCircle2, Loader2, AlertCircle,
+  History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
   MessageSquare, User, Search
 } from 'lucide-react';
@@ -13,18 +11,19 @@ import {
 // ==========================================
 // 1. KONFIGURASI (HYBRID MODE)
 // ==========================================
-const IS_LOCAL = import.meta.env.DEV;
+const IS_LOCAL = import.meta.env.DEV; 
 
 const LOCAL_CREDENTIALS = {
-  api_id: '57788',
-  api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b',
-  secret_key: 'daudhanafi'
+  api_id: '57788',  
+  api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b', 
+  secret_key: 'daudhanafi' 
 };
 
-const CONFIG = { PROFIT_PERCENTAGE: 150 }; // Persentase profit
-const ADMIN_USERNAME = 'DaudHanafi';
+const CONFIG = { PROFIT_PERCENTAGE: 150 };
+const ADMIN_USERNAME = 'DaudHanafi'; 
 
-// --- HELPER FORMAT RUPIAH ---
+// --- HELPER FORMAT RUPIAH (BARU) ---
+// Fungsi ini memastikan format angka menjadi: "Rp 10.000" (Pakai titik, tanpa koma desimal aneh)
 const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -88,25 +87,20 @@ const AdminView = () => {
 
   const handleTopUp = async (e) => {
     e.preventDefault();
+    // Update Format Rupiah di Konfirmasi
     if (!confirm(`Kirim saldo ${formatRupiah(amount)} ke @${targetUsername}?`)) return;
     setLoading(true);
-    // GANTI ALERT JADI TOAST LOADING
-    const toastId = toast.loading("Mengirim saldo...");
     try {
       const { data: targetUser, error: findError } = await supabase.from('profiles').select('*').eq('username', targetUsername).single();
-      if (findError || !targetUser) { throw new Error("Username tidak ditemukan!"); }
+      if (findError || !targetUser) { alert("Username tidak ditemukan!"); setLoading(false); return; }
 
       const newBalance = Number(targetUser.balance) + Number(amount);
       const { error: updateError } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', targetUser.id);
       if (updateError) throw updateError;
 
-      // GANTI ALERT JADI TOAST SUKSES
-      toast.success("Saldo Berhasil Dikirim!", { id: toastId });
+      alert("Saldo Berhasil Dikirim!");
       setTargetUsername(''); setAmount(''); fetchUsers();
-    } catch (err) {
-      // GANTI ALERT JADI TOAST ERROR
-      toast.error("Gagal: " + err.message, { id: toastId });
-    }
+    } catch (err) { alert("Gagal: " + err.message); }
     setLoading(false);
   };
 
@@ -129,6 +123,7 @@ const AdminView = () => {
               {users.map(u => (
                 <tr key={u.id} className="hover:bg-slate-800/30">
                   <td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td>
+                  {/* Update Format Rupiah */}
                   <td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td>
                   <td className="px-3 py-3 text-right"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button></td>
                 </tr>
@@ -148,6 +143,7 @@ const DashboardView = ({ profile, onNavigate }) => {
         <div className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl p-6 md:p-8 border border-indigo-500/30 shadow-lg bg-gradient-to-br from-indigo-900/40 to-slate-900/40">
             <div className="absolute top-0 right-0 p-3 opacity-10"><CreditCard size={120}/></div>
             <p className="text-indigo-200 font-medium mb-1 text-sm md:text-base">Saldo Tersedia</p>
+            {/* Update Format Rupiah */}
             <h3 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-6">{formatRupiah(profile.balance || 0)}</h3>
             <button onClick={() => onNavigate('deposit')} className="px-5 py-2.5 bg-white hover:bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20"><CreditCard size={16}/> Isi Saldo</button>
         </div>
@@ -179,7 +175,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const [target, setTarget] = useState('');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
-  // const [message, setMessage] = useState(null); // TIDAK DIPERLUKAN LAGI KARENA PAKAI TOAST
+  const [message, setMessage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const getVal = (item, keys) => {
@@ -189,7 +185,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   };
 
   const validServices = Array.isArray(services) ? services : [];
-
+  
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
@@ -197,7 +193,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const priceKeys = ['price', 'rate', 'harga'];
 
   const searchedServices = validServices.filter(s => {
-      if (!searchTerm) return true;
+      if (!searchTerm) return true; 
       const term = searchTerm.toLowerCase();
       const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
       const cName = (getVal(s, catNameKeys) || '').toLowerCase();
@@ -210,9 +206,9 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   searchedServices.forEach(item => {
       let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
       let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
-      if (cId && !seenCats.has(String(cId))) {
-          seenCats.add(String(cId));
-          categories.push({ id: cId, name: cName });
+      if (cId && !seenCats.has(String(cId))) { 
+          seenCats.add(String(cId)); 
+          categories.push({ id: cId, name: cName }); 
       }
   });
 
@@ -228,21 +224,15 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    // GANTI PESAN MANUAL JADI TOAST LOADING
-    const toastId = toast.loading("Memproses pesanan...");
-
-    const result = await onOrder({
-        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice
+    setLoading(true); setMessage(null);
+    const result = await onOrder({ 
+        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
     }, currentService);
-
     if (result.success) {
-       // GANTI PESAN JADI TOAST SUKSES
-       toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
+       setMessage({ type: 'success', text: `Sukses! Order ID: ${result.orderId}` });
        refreshProfile(); setTarget(''); setQuantity('');
     } else {
-       // GANTI PESAN JADI TOAST ERROR
-       toast.error(result.msg || 'Gagal order.', { id: toastId });
+       setMessage({ type: 'error', text: result.msg || 'Gagal order.' });
     }
     setLoading(false);
   };
@@ -251,14 +241,14 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
       <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
-        {/* BAGIAN PESAN LAMA DIHAPUS KARENA SUDAH PAKAI TOAST */}
-
+        {message && <div className={`p-4 mb-6 rounded-xl text-sm border ${message.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>{message.text}</div>}
+        
         <form onSubmit={handleSubmit} className="space-y-4">
            <div className="relative">
               <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
               <div className="relative">
                   <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
-                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }}
+                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
                   />
                   <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
               </div>
@@ -281,6 +271,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
                           const name = getVal(s, srvNameKeys);
                           const price = parseFloat(getVal(s, priceKeys) || 0);
                           const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
+                          // Update Format Rupiah di Dropdown
                           return <option key={i} value={id}>ID:{id} - {name} - {formatRupiah(sellPrice)}</option>
                       })}
                   </select>
@@ -292,6 +283,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
                 <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
                 <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
                     <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
+                    {/* Update Format Rupiah */}
                     <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: {formatRupiah(sellingPricePer1k)} / 1k</span>
                 </div>
              </div>
@@ -307,10 +299,11 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
                  <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
               </div>
            </div>
-
+           
            <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
              <div className="text-center md:text-left">
                 <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
+                {/* Update Format Rupiah */}
                 <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
              </div>
              <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
@@ -324,6 +317,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
            <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
            <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
               <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
+              {/* Update Format Rupiah */}
               <b className="text-white text-xl">{formatRupiah(balance)}</b>
            </div>
            {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
@@ -347,15 +341,9 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
 
     const handleAction = async (action, order) => {
         if (loadingId) return; setLoadingId(order.id);
-        // GANTI ALERT JADI TOAST LOADING
-        const toastId = toast.loading("Memproses...");
-        try {
-            if (action === 'status') await onCheckStatus(order, toastId);
-            if (action === 'refill') await onRefill(order, toastId);
-        } catch (error) {
-            toast.error("Terjadi kesalahan", { id: toastId });
-        }
-        setLoadingId(null);
+        if (action === 'status') await onCheckStatus(order);
+        if (action === 'refill') await onRefill(order);
+        setLoadingId(null); 
         const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (data) setOrders(data);
     };
@@ -412,7 +400,7 @@ const DepositView = () => (
                 <CreditCard className="text-indigo-400"/> Deposit QRIS
             </h3>
             <p className="text-slate-400 text-sm mb-6">Otomatis dicek Admin. Bebas biaya admin.</p>
-
+            
             <div className="bg-white p-4 rounded-2xl inline-block shadow-lg shadow-indigo-500/20 mb-6 relative group transform hover:scale-105 transition-all duration-300">
                 <div className="absolute inset-0 border-2 border-dashed border-slate-300 rounded-2xl m-2 pointer-events-none"></div>
                 <img src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" alt="QRIS Code" className="w-48 h-48 md:w-56 md:h-56 object-contain mx-auto"/>
@@ -440,31 +428,22 @@ const LoginPage = () => {
 
     const handleAuth = async (e) => {
         e.preventDefault(); setLoading(true);
-        // GANTI ALERT JADI TOAST LOADING
-        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Masuk...");
         try {
             if (isRegister) {
-                const { data: authData, error: authError } = await supabase.auth.signUp({
+                const { data: authData, error: authError } = await supabase.auth.signUp({ 
                     email: formData.email, password: formData.password,
                     options: { emailRedirectTo: window.location.origin }
                 });
                 if (authError) throw authError;
                 if (authData.user) {
                     await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
-                    // GANTI ALERT JADI TOAST SUKSES
-                    toast.success("Registrasi Berhasil! Cek Email untuk verifikasi.", { id: toastId, duration: 5000 });
-                    setIsRegister(false);
+                    alert("Registrasi Berhasil! Cek Email untuk verifikasi."); setIsRegister(false);
                 }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
                 if (error) throw error;
-                // TOAST SUKSES LOGIN (Akan hilang otomatis saat pindah halaman)
-                toast.success("Berhasil Login!", { id: toastId });
             }
-        } catch (error) {
-            // GANTI ALERT JADI TOAST ERROR
-            toast.error(error.message, { id: toastId });
-        } finally { setLoading(false); }
+        } catch (error) { alert(error.message); } finally { setLoading(false); }
     };
 
     return (
@@ -495,7 +474,7 @@ const App = () => {
   const [profile, setProfile] = useState(null);
   const [services, setServices] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default closed on mobile
 
   useEffect(() => {
       supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
@@ -528,7 +507,7 @@ const App = () => {
             await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
             setProfile({ ...profile, balance: newBal });
             await supabase.from('user_orders').insert([{
-                 user_id: session.user.id, service_name: details?.name, target: data.target,
+                 user_id: session.user.id, service_name: details?.name, target: data.target, 
                  quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
                  status: 'Pending', provider_id: String(res.data.data.id)
             }]);
@@ -538,40 +517,34 @@ const App = () => {
      } catch (e) { return { success: false, msg: 'Koneksi error' }; }
   };
 
-  // UPDATE FUNGSI CEK STATUS AGAR PAKAI TOAST
-  const handleCheckStatus = async (order, toastId) => {
+  const handleCheckStatus = async (order) => {
       try {
           const res = await callApi('status', { id: order.provider_id || order.id, action: 'status' });
           if (res.data.status === true || res.data.response === true) {
               await supabase.from('user_orders').update({ status: res.data.data.status, start_count: res.data.data.start_count, remains: res.data.data.remains }).eq('id', order.id);
-              toast.success(`Status Diupdate: ${res.data.data.status}`, { id: toastId });
-          } else { toast.error("Gagal cek status", { id: toastId }); }
-      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
+              alert(`Status Updated: ${res.data.data.status}`);
+          } else { alert("Gagal cek status"); }
+      } catch (err) { alert("Koneksi Error"); }
   };
 
-  // UPDATE FUNGSI REFILL AGAR PAKAI TOAST
-  const handleRefill = async (order, toastId) => {
-      if(!confirm("Ajukan Refill?")) { toast.dismiss(toastId); return; }
+  const handleRefill = async (order) => {
+      if(!confirm("Refill?")) return;
       try {
           const res = await callApi('reffil', { id: order.provider_id || order.id, action: 'reffil' });
           if (res.data.status === true || res.data.response === true) {
               await supabase.from('user_orders').update({ refill_id: String(res.data.data.id) }).eq('id', order.id);
-              toast.success("Refill Berhasil Diajukan!", { id: toastId });
-          } else { toast.error("Gagal mengajukan refill", { id: toastId }); }
-      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
+              alert("Refill Sukses!");
+          } else { alert("Gagal Refill"); }
+      } catch (err) { alert("Koneksi Error"); }
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); setProfile(null); };
 
+  if (!session) return <LoginPage />;
+  const isAdmin = profile?.username === ADMIN_USERNAME;
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
-       {/* 2. TAMBAHKAN KONTAINER TOAST DI SINI */}
-       <Toaster position="top-center" reverseOrder={false} toastOptions={{
-         style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
-         success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
-         error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-       }}/>
-
        {/* MOBILE SIDEBAR OVERLAY */}
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
@@ -597,27 +570,24 @@ const App = () => {
        {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
 
        <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          {!session ? <LoginPage /> : (
-            <>
-              <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
-                <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
-                <div className="flex items-center gap-4 ml-auto">
-                    <div className="text-right">
-                        <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
-                        <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
-                    </div>
+          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
+             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
+             <div className="flex items-center gap-4 ml-auto">
+                <div className="text-right">
+                    <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
+                    {/* Update Format Rupiah di Header */}
+                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
                 </div>
-              </header>
+             </div>
+          </header>
 
-              <div className="flex-1 overflow-y-auto p-4 md:p-8">
-                {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
-                {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
-                {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
-                {activePage === 'deposit' && <DepositView />}
-                {activePage === 'admin' && isAdmin && <AdminView />}
-              </div>
-            </>
-          )}
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
+             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
+             {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
+             {activePage === 'deposit' && <DepositView />}
+             {activePage === 'admin' && isAdmin && <AdminView />}
+          </div>
        </main>
     </div>
   );
