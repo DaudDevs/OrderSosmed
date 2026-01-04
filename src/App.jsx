@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios'; 
 import { supabase } from './supabaseClient'; 
-// 1. IMPORT LIBRARY TOAST
 import { Toaster, toast } from 'react-hot-toast';
 import { 
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search
+  MessageSquare, User, Search, Mail
 } from 'lucide-react';
 
 // ==========================================
@@ -21,11 +20,9 @@ const LOCAL_CREDENTIALS = {
   secret_key: 'daudhanafi' 
 };
 
-// Ubah sesuai margin profit yang diinginkan
 const CONFIG = { PROFIT_PERCENTAGE: 150 }; 
 const ADMIN_USERNAME = 'DaudHanafi'; 
 
-// --- HELPER FORMAT RUPIAH ---
 const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
@@ -90,11 +87,8 @@ const AdminView = () => {
   const handleTopUp = async (e) => {
     e.preventDefault();
     if (!confirm(`Kirim saldo ${formatRupiah(amount)} ke @${targetUsername}?`)) return;
-    
     setLoading(true);
-    // TOAST LOADING
     const toastId = toast.loading("Mengirim saldo...");
-    
     try {
       const { data: targetUser, error: findError } = await supabase.from('profiles').select('*').eq('username', targetUsername).single();
       if (findError || !targetUser) { throw new Error("Username tidak ditemukan!"); }
@@ -103,13 +97,9 @@ const AdminView = () => {
       const { error: updateError } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', targetUser.id);
       if (updateError) throw updateError;
 
-      // TOAST SUCCESS
       toast.success("Saldo Berhasil Dikirim!", { id: toastId });
       setTargetUsername(''); setAmount(''); fetchUsers();
-    } catch (err) { 
-      // TOAST ERROR
-      toast.error("Gagal: " + err.message, { id: toastId });
-    }
+    } catch (err) { toast.error("Gagal: " + err.message, { id: toastId }); }
     setLoading(false);
   };
 
@@ -191,7 +181,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   };
 
   const validServices = Array.isArray(services) ? services : [];
-  
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
@@ -212,10 +201,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   searchedServices.forEach(item => {
       let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
       let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
-      if (cId && !seenCats.has(String(cId))) { 
-          seenCats.add(String(cId)); 
-          categories.push({ id: cId, name: cName }); 
-      }
+      if (cId && !seenCats.has(String(cId))) { seenCats.add(String(cId)); categories.push({ id: cId, name: cName }); }
   });
 
   const filteredServices = searchedServices.filter(s => {
@@ -231,19 +217,14 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // TOAST LOADING
     const toastId = toast.loading("Memproses pesanan...");
-
     const result = await onOrder({ 
         service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
     }, currentService);
-
     if (result.success) {
-       // TOAST SUKSES
        toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
        refreshProfile(); setTarget(''); setQuantity('');
     } else {
-       // TOAST ERROR
        toast.error(result.msg || 'Gagal order.', { id: toastId });
     }
     setLoading(false);
@@ -348,7 +329,6 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
 
     const handleAction = async (action, order) => {
         if (loadingId) return; setLoadingId(order.id);
-        // TOAST LOADING
         const toastId = toast.loading("Memproses...");
         try {
             if (action === 'status') await onCheckStatus(order, toastId);
@@ -438,10 +418,11 @@ const LoginPage = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [formData, setFormData] = useState({ email: '', password: '', username: '', fullname: '' });
     const [loading, setLoading] = useState(false);
+    // STATE UNTUK BANNER SUKSES
+    const [verificationSent, setVerificationSent] = useState(null);
 
     const handleAuth = async (e) => {
         e.preventDefault(); setLoading(true);
-        // TOAST LOADING
         const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Sedang Masuk...");
         
         try {
@@ -453,13 +434,22 @@ const LoginPage = () => {
                 if (authError) throw authError;
                 if (authData.user) {
                     await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
-                    toast.success("Registrasi Berhasil! Cek Email.", { id: toastId, duration: 5000 });
+                    toast.success("Sukses! Cek Email Anda.", { id: toastId });
+                    setVerificationSent(formData.email);
                     setIsRegister(false);
                 }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
-                if (error) throw error;
-                toast.success("Berhasil Login!", { id: toastId });
+                if (error) {
+                    if (error.message.includes("Email not confirmed")) {
+                        toast.error("Email belum diverifikasi! Cek inbox/spam.", { id: toastId });
+                        setVerificationSent(formData.email);
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    toast.success("Berhasil Login!", { id: toastId });
+                }
             }
         } catch (error) { 
             toast.error(error.message, { id: toastId });
@@ -474,6 +464,21 @@ const LoginPage = () => {
                     <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
                 </div>
                 <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
+                
+                {/* --- BANNER CEK EMAIL (BARU) --- */}
+                {verificationSent && !isRegister && (
+                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex gap-3 items-start animate-fade-in">
+                        <div className="p-1 bg-green-500 rounded-full text-white mt-0.5 shadow-lg shadow-green-500/30 flex-shrink-0"><Mail size={14} /></div>
+                        <div>
+                            <h4 className="text-green-400 font-bold text-sm mb-1">Cek Email Kamu!</h4>
+                            <p className="text-slate-400 text-xs leading-relaxed">
+                                Link verifikasi telah dikirim ke <b className="text-white">{verificationSent}</b>. 
+                                <br/><br/>Silakan cek <b>Inbox</b> atau <b>Spam</b> folder, lalu klik tombol verifikasi untuk Login.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <form onSubmit={handleAuth} className="space-y-4">
                     {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
                     <input type="email" placeholder="Email" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
@@ -562,7 +567,6 @@ const App = () => {
 
   if (!session) return <LoginPage />;
   
-  // !!! PERBAIKAN PENTING: Definisi isAdmin sudah dikembalikan !!!
   const isAdmin = profile?.username === ADMIN_USERNAME;
 
   return (
