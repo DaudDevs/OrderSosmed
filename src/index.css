@@ -1,0 +1,32 @@
+/* Copy kode ini ke dalam file src/index.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Scrollbar agar lebih rapi (Opsional) */
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #1e293b;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 50px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+}
+
+body {
+  background-color: #0f172a; /* Warna dasar background */
+  margin: 0;
+  font-family: 'Inter', sans-serif; /* Pastikan font enak dibaca */
+}
