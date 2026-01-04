@@ -5,30 +5,53 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, 
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare // <--- SUDAH DITAMBAHKAN DI SINI
+  MessageSquare
 } from 'lucide-react';
 
 // ==========================================
-// 1. KONFIGURASI
+// 1. KONFIGURASI (HYBRID MODE - FIX)
 // ==========================================
-const API_CREDENTIALS = {
+
+// Cek apakah sedang di Localhost (Laptop) atau Online (Vercel)
+const IS_LOCAL = import.meta.env.DEV; 
+
+// Konfigurasi ini HANYA dipakai saat di Localhost.
+// Saat Online, data ini diambil dari Server Vercel (file .env) jadi aman.
+const LOCAL_CREDENTIALS = {
   api_id: '57788',  
   api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b', 
   secret_key: 'daudhanafi' 
 };
 
-// KEUNTUNGAN KAMU (MARKUP 20%)
 const CONFIG = { PROFIT_PERCENTAGE: 20 };
+// Pastikan username ini sama persis dengan di database Supabase (Case Sensitive)
+const ADMIN_USERNAME = 'DaudHanafi'; 
 
-// GANTI DENGAN USERNAME KAMU SENDIRI
-const ADMIN_USERNAME = 'daudhanafi'; 
-
-const BASE_URL = '/api-proxy/api-1'; 
-const ENDPOINTS = {
-  services: `${BASE_URL}/service`, 
-  order: `${BASE_URL}/order`,
-  status: `${BASE_URL}/status`, 
-  reffil: `${BASE_URL}/reffil`, 
+// --- FUNGSI PENGHUBUNG API PINTAR (SMART FETCH) ---
+const callApi = async (endpoint, payload = {}) => {
+    // MODE 1: LOCALHOST (Pakai Proxy Vite seperti biasa)
+    if (IS_LOCAL) {
+        const params = new URLSearchParams();
+        params.append('api_id', LOCAL_CREDENTIALS.api_id);
+        params.append('api_key', LOCAL_CREDENTIALS.api_key);
+        params.append('secret_key', LOCAL_CREDENTIALS.secret_key);
+        
+        // Masukkan data tambahan (service, target, dll)
+        Object.keys(payload).forEach(key => params.append(key, payload[key]));
+        
+        // Tembak lewat Vite Proxy (/api-proxy/...)
+        return await axios.post(`/api-proxy/api-1/${endpoint}`, params);
+    } 
+    
+    // MODE 2: ONLINE / PRODUCTION (Pakai Backend Vercel - AMAN)
+    else {
+        // Kita cuma kirim data pesanan. API Key disuntikkan di server backend.
+        // Tembak lewat Vercel Function (/api/proxy)
+        return await axios.post('/api/proxy', { 
+            endpoint: endpoint, // Kasih tau server mau nembak ke mana (profile/order/dll)
+            ...payload 
+        });
+    }
 };
 
 // ==========================================
@@ -57,7 +80,6 @@ const MenuItem = ({ icon, label, isActive, isOpen, onClick, variant = 'default' 
 // 3. PAGE COMPONENTS
 // ==========================================
 
-// --- ADMIN VIEW ---
 const AdminView = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [amount, setAmount] = useState('');
@@ -191,6 +213,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
     e.preventDefault();
     setLoading(true); setMessage(null);
     
+    // PANGGIL FUNGSI SMART API
     const result = await onOrder({ 
         service: selectedServiceId, 
         target, 
@@ -263,7 +286,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   );
 };
 
-// --- RIWAYAT DENGAN FITUR CEK STATUS & REFILL ---
 const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
     const [orders, setOrders] = useState([]);
     const [loadingId, setLoadingId] = useState(null);
@@ -324,7 +346,6 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
     );
 };
 
-// --- DEPOSIT VIEW DENGAN QRIS ---
 const DepositView = () => (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
         <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 text-center">
@@ -335,8 +356,8 @@ const DepositView = () => (
             
             <div className="bg-white p-4 rounded-2xl inline-block shadow-lg shadow-indigo-500/10 mb-6 relative group">
                 <div className="absolute inset-0 border-2 border-dashed border-slate-300 rounded-2xl m-2 pointer-events-none"></div>
-                {/* GANTI LINK QRIS */}
-                <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" alt="QRIS Code" className="w-48 h-48 object-contain mx-auto"/>
+                {/* GANTI LINK QRIS DENGAN GAMBAR KAMU */}
+                <img src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" alt="QRIS Code" className="w-48 h-48 object-contain mx-auto"/>
                 <p className="text-slate-900 font-bold mt-2 text-sm tracking-widest">SCAN ME</p>
             </div>
 
@@ -417,12 +438,8 @@ const App = () => {
       if (session) {
           const getServices = async () => {
             try {
-                const params = new URLSearchParams();
-                params.append('api_id', API_CREDENTIALS.api_id);
-                params.append('api_key', API_CREDENTIALS.api_key);
-                params.append('secret_key', API_CREDENTIALS.secret_key);
-                params.append('action', 'services'); 
-                const res = await axios.post(ENDPOINTS.services, params);
+                // MENGGUNAKAN SMART CALL API (Hybrid)
+                const res = await callApi('service', { action: 'services' });
                 if (res.data && Array.isArray(res.data.data)) setServices(res.data.data);
             } catch (e) { console.error("Gagal load services", e); }
           };
@@ -430,21 +447,18 @@ const App = () => {
       }
   }, [session]);
 
-  // --- ORDER FUNCTION ---
   const handlePlaceOrder = async (orderData, serviceDetails) => {
       if (!profile) return { success: false, msg: 'Profil error' };
       if (profile.balance < orderData.totalPrice) return { success: false, msg: 'Saldo Anda tidak mencukupi!' };
 
       try {
-          const params = new URLSearchParams();
-          params.append('api_id', API_CREDENTIALS.api_id);
-          params.append('api_key', API_CREDENTIALS.api_key);
-          params.append('secret_key', API_CREDENTIALS.secret_key);
-          params.append('service', orderData.service);
-          params.append('target', orderData.target);
-          params.append('quantity', orderData.quantity);
+          // MENGGUNAKAN SMART CALL API (Hybrid)
+          const res = await callApi('order', {
+              service: orderData.service,
+              target: orderData.target,
+              quantity: orderData.quantity
+          });
 
-          const res = await axios.post(ENDPOINTS.order, params);
           const isSuccess = res.data.status === true || res.data.response === true;
 
           if (isSuccess) {
@@ -471,18 +485,11 @@ const App = () => {
       } catch (err) { return { success: false, msg: 'Koneksi ke Pusat Gagal.' }; }
   };
 
-  // --- CEK STATUS FUNCTION ---
   const handleCheckStatus = async (order) => {
       try {
           const targetId = order.provider_id || order.id; 
-          const params = new URLSearchParams();
-          params.append('api_id', API_CREDENTIALS.api_id);
-          params.append('api_key', API_CREDENTIALS.api_key);
-          params.append('secret_key', API_CREDENTIALS.secret_key);
-          params.append('id', targetId); 
-          params.append('action', 'status');
-
-          const res = await axios.post(ENDPOINTS.status, params);
+          // MENGGUNAKAN SMART CALL API (Hybrid)
+          const res = await callApi('status', { id: targetId, action: 'status' });
           
           if (res.data.status === true || res.data.response === true) {
               const newData = res.data.data; 
@@ -498,19 +505,13 @@ const App = () => {
       } catch (err) { alert("Koneksi Error"); }
   };
 
-  // --- REFILL FUNCTION ---
   const handleRefill = async (order) => {
       if(!confirm("Ajukan Refill?")) return;
       try {
           const targetId = order.provider_id || order.id; 
-          const params = new URLSearchParams();
-          params.append('api_id', API_CREDENTIALS.api_id);
-          params.append('api_key', API_CREDENTIALS.api_key);
-          params.append('secret_key', API_CREDENTIALS.secret_key);
-          params.append('id', targetId);
-          params.append('action', 'reffil'); 
+          // MENGGUNAKAN SMART CALL API (Hybrid)
+          const res = await callApi('reffil', { id: targetId, action: 'reffil' });
 
-          const res = await axios.post(ENDPOINTS.reffil, params);
           if (res.data.status === true || res.data.response === true) {
               const refillId = res.data.data.id || res.data.data.refill_id;
               await supabase.from('user_orders').update({ refill_id: String(refillId) }).eq('id', order.id);
