@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { supabase } from './supabaseClient';
+import axios from 'axios'; 
+import { supabase } from './supabaseClient'; 
 // 1. IMPORT LIBRARY TOAST
 import { Toaster, toast } from 'react-hot-toast';
-import {
+import { 
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
-  History, Key, CheckCircle2, Loader2, AlertCircle,
+  History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
   MessageSquare, User, Search
 } from 'lucide-react';
@@ -13,16 +13,17 @@ import {
 // ==========================================
 // 1. KONFIGURASI (HYBRID MODE)
 // ==========================================
-const IS_LOCAL = import.meta.env.DEV;
+const IS_LOCAL = import.meta.env.DEV; 
 
 const LOCAL_CREDENTIALS = {
-  api_id: '57788',
-  api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b',
-  secret_key: 'daudhanafi'
+  api_id: '57788',  
+  api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b', 
+  secret_key: 'daudhanafi' 
 };
 
-const CONFIG = { PROFIT_PERCENTAGE: 150 }; // Persentase profit
-const ADMIN_USERNAME = 'DaudHanafi';
+// Ubah sesuai margin profit yang diinginkan
+const CONFIG = { PROFIT_PERCENTAGE: 150 }; 
+const ADMIN_USERNAME = 'DaudHanafi'; 
 
 // --- HELPER FORMAT RUPIAH ---
 const formatRupiah = (number) => {
@@ -70,7 +71,7 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
 };
 
 // ==========================================
-// 3. PAGE COMPONENTS (RESPONSIVE)
+// 3. PAGE COMPONENTS
 // ==========================================
 
 const AdminView = () => {
@@ -89,9 +90,11 @@ const AdminView = () => {
   const handleTopUp = async (e) => {
     e.preventDefault();
     if (!confirm(`Kirim saldo ${formatRupiah(amount)} ke @${targetUsername}?`)) return;
+    
     setLoading(true);
-    // GANTI ALERT JADI TOAST LOADING
+    // TOAST LOADING
     const toastId = toast.loading("Mengirim saldo...");
+    
     try {
       const { data: targetUser, error: findError } = await supabase.from('profiles').select('*').eq('username', targetUsername).single();
       if (findError || !targetUser) { throw new Error("Username tidak ditemukan!"); }
@@ -100,11 +103,11 @@ const AdminView = () => {
       const { error: updateError } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', targetUser.id);
       if (updateError) throw updateError;
 
-      // GANTI ALERT JADI TOAST SUKSES
+      // TOAST SUCCESS
       toast.success("Saldo Berhasil Dikirim!", { id: toastId });
       setTargetUsername(''); setAmount(''); fetchUsers();
-    } catch (err) {
-      // GANTI ALERT JADI TOAST ERROR
+    } catch (err) { 
+      // TOAST ERROR
       toast.error("Gagal: " + err.message, { id: toastId });
     }
     setLoading(false);
@@ -179,7 +182,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const [target, setTarget] = useState('');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
-  // const [message, setMessage] = useState(null); // TIDAK DIPERLUKAN LAGI KARENA PAKAI TOAST
   const [searchTerm, setSearchTerm] = useState('');
 
   const getVal = (item, keys) => {
@@ -189,7 +191,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   };
 
   const validServices = Array.isArray(services) ? services : [];
-
+  
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
@@ -197,7 +199,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const priceKeys = ['price', 'rate', 'harga'];
 
   const searchedServices = validServices.filter(s => {
-      if (!searchTerm) return true;
+      if (!searchTerm) return true; 
       const term = searchTerm.toLowerCase();
       const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
       const cName = (getVal(s, catNameKeys) || '').toLowerCase();
@@ -210,9 +212,9 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   searchedServices.forEach(item => {
       let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
       let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
-      if (cId && !seenCats.has(String(cId))) {
-          seenCats.add(String(cId));
-          categories.push({ id: cId, name: cName });
+      if (cId && !seenCats.has(String(cId))) { 
+          seenCats.add(String(cId)); 
+          categories.push({ id: cId, name: cName }); 
       }
   });
 
@@ -229,19 +231,19 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // GANTI PESAN MANUAL JADI TOAST LOADING
+    // TOAST LOADING
     const toastId = toast.loading("Memproses pesanan...");
 
-    const result = await onOrder({
-        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice
+    const result = await onOrder({ 
+        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
     }, currentService);
 
     if (result.success) {
-       // GANTI PESAN JADI TOAST SUKSES
+       // TOAST SUKSES
        toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
        refreshProfile(); setTarget(''); setQuantity('');
     } else {
-       // GANTI PESAN JADI TOAST ERROR
+       // TOAST ERROR
        toast.error(result.msg || 'Gagal order.', { id: toastId });
     }
     setLoading(false);
@@ -251,14 +253,13 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
       <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
-        {/* BAGIAN PESAN LAMA DIHAPUS KARENA SUDAH PAKAI TOAST */}
-
+        
         <form onSubmit={handleSubmit} className="space-y-4">
            <div className="relative">
               <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
               <div className="relative">
                   <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
-                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }}
+                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
                   />
                   <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
               </div>
@@ -347,15 +348,15 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
 
     const handleAction = async (action, order) => {
         if (loadingId) return; setLoadingId(order.id);
-        // GANTI ALERT JADI TOAST LOADING
+        // TOAST LOADING
         const toastId = toast.loading("Memproses...");
         try {
             if (action === 'status') await onCheckStatus(order, toastId);
             if (action === 'refill') await onRefill(order, toastId);
-        } catch (error) {
-            toast.error("Terjadi kesalahan", { id: toastId });
+        } catch (error) { 
+            toast.error("Error Sistem", { id: toastId });
         }
-        setLoadingId(null);
+        setLoadingId(null); 
         const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
         if (data) setOrders(data);
     };
@@ -440,8 +441,9 @@ const LoginPage = () => {
 
     const handleAuth = async (e) => {
         e.preventDefault(); setLoading(true);
-        // GANTI ALERT JADI TOAST LOADING
-        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Masuk...");
+        // TOAST LOADING
+        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Sedang Masuk...");
+        
         try {
             if (isRegister) {
                 const { data: authData, error: authError } = await supabase.auth.signUp({ 
@@ -451,18 +453,15 @@ const LoginPage = () => {
                 if (authError) throw authError;
                 if (authData.user) {
                     await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
-                    // GANTI ALERT JADI TOAST SUKSES
-                    toast.success("Registrasi Berhasil! Cek Email untuk verifikasi.", { id: toastId, duration: 5000 });
+                    toast.success("Registrasi Berhasil! Cek Email.", { id: toastId, duration: 5000 });
                     setIsRegister(false);
                 }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
                 if (error) throw error;
-                // TOAST SUKSES LOGIN (Akan hilang otomatis saat pindah halaman)
                 toast.success("Berhasil Login!", { id: toastId });
             }
         } catch (error) { 
-            // GANTI ALERT JADI TOAST ERROR
             toast.error(error.message, { id: toastId });
         } finally { setLoading(false); }
     };
@@ -495,7 +494,7 @@ const App = () => {
   const [profile, setProfile] = useState(null);
   const [services, setServices] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); 
 
   useEffect(() => {
       supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
@@ -538,34 +537,37 @@ const App = () => {
      } catch (e) { return { success: false, msg: 'Koneksi error' }; }
   };
 
-  // UPDATE FUNGSI CEK STATUS AGAR PAKAI TOAST
   const handleCheckStatus = async (order, toastId) => {
       try {
           const res = await callApi('status', { id: order.provider_id || order.id, action: 'status' });
           if (res.data.status === true || res.data.response === true) {
               await supabase.from('user_orders').update({ status: res.data.data.status, start_count: res.data.data.start_count, remains: res.data.data.remains }).eq('id', order.id);
-              toast.success(`Status Diupdate: ${res.data.data.status}`, { id: toastId });
+              toast.success(`Status: ${res.data.data.status}`, { id: toastId });
           } else { toast.error("Gagal cek status", { id: toastId }); }
       } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
   };
 
-  // UPDATE FUNGSI REFILL AGAR PAKAI TOAST
   const handleRefill = async (order, toastId) => {
       if(!confirm("Ajukan Refill?")) { toast.dismiss(toastId); return; }
       try {
           const res = await callApi('reffil', { id: order.provider_id || order.id, action: 'reffil' });
           if (res.data.status === true || res.data.response === true) {
               await supabase.from('user_orders').update({ refill_id: String(res.data.data.id) }).eq('id', order.id);
-              toast.success("Refill Berhasil Diajukan!", { id: toastId });
-          } else { toast.error("Gagal mengajukan refill", { id: toastId }); }
+              toast.success("Refill Berhasil!", { id: toastId });
+          } else { toast.error("Gagal Refill", { id: toastId }); }
       } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); setProfile(null); };
 
+  if (!session) return <LoginPage />;
+  
+  // !!! PERBAIKAN PENTING: Definisi isAdmin sudah dikembalikan !!!
+  const isAdmin = profile?.username === ADMIN_USERNAME;
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
-       {/* 2. TAMBAHKAN KONTAINER TOAST DI SINI */}
+       {/* 2. KOMPONEN TOAST (WAJIB ADA) */}
        <Toaster position="top-center" reverseOrder={false} toastOptions={{
          style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
          success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
@@ -575,7 +577,7 @@ const App = () => {
        {/* MOBILE SIDEBAR OVERLAY */}
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>Sosmedku</span>
+             <span>SosmedKu</span>
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
@@ -597,27 +599,23 @@ const App = () => {
        {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
 
        <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          {!session ? <LoginPage /> : (
-            <>
-              <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
-                <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
-                <div className="flex items-center gap-4 ml-auto">
-                    <div className="text-right">
-                        <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
-                        <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
-                    </div>
+          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
+             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
+             <div className="flex items-center gap-4 ml-auto">
+                <div className="text-right">
+                    <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
+                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
                 </div>
-              </header>
+             </div>
+          </header>
 
-              <div className="flex-1 overflow-y-auto p-4 md:p-8">
-                {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
-                {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
-                {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
-                {activePage === 'deposit' && <DepositView />}
-                {activePage === 'admin' && isAdmin && <AdminView />}
-              </div>
-            </>
-          )}
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
+             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
+             {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
+             {activePage === 'deposit' && <DepositView />}
+             {activePage === 'admin' && isAdmin && <AdminView />}
+          </div>
        </main>
     </div>
   );
