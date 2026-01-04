@@ -19,7 +19,7 @@ const LOCAL_CREDENTIALS = {
   secret_key: 'daudhanafi' 
 };
 
-const CONFIG = { PROFIT_PERCENTAGE: 20 };
+const CONFIG = { PROFIT_PERCENTAGE: 150 };
 const ADMIN_USERNAME = 'DaudHanafi'; 
 
 // --- HELPER FORMAT RUPIAH (BARU) ---
