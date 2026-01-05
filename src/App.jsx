@@ -255,19 +255,29 @@ const AdminSaldoView = () => {
     setLoading(false);
   };
 
-  // --- FITUR BARU: DELETE USER ---
+  // --- FITUR BARU: DELETE USER (YANG SUDAH DIPERBAIKI) ---
   const handleDeleteUser = async (userId, username) => {
-      if(!confirm(`⚠️ PERINGATAN: Apakah Anda yakin ingin menghapus user @${username}? Data tidak bisa dikembalikan!`)) return;
+      if(!confirm(`⚠️ PERINGATAN KERAS!\n\nAnda akan menghapus user @${username}.\n\nSemua data berikut akan HILANG PERMANEN:\n- Riwayat Saldo\n- Semua Orderan\n- Semua Tiket Chat\n\nLanjutkan?`)) return;
       
-      const toastId = toast.loading("Menghapus user...");
+      const toastId = toast.loading("Membersihkan data user...");
       try {
-          const { error } = await supabase.from('profiles').delete().eq('id', userId);
-          if (error) throw error;
+          // 1. Hapus Tiket User dulu
+          const { error: errTicket } = await supabase.from('tickets').delete().eq('user_id', userId);
+          if (errTicket) throw new Error("Gagal hapus tiket: " + errTicket.message);
+
+          // 2. Hapus Order User dulu
+          const { error: errOrder } = await supabase.from('user_orders').delete().eq('user_id', userId);
+          if (errOrder) throw new Error("Gagal hapus order: " + errOrder.message);
+
+          // 3. Baru Hapus Profil User
+          const { error: errProfile } = await supabase.from('profiles').delete().eq('id', userId);
+          if (errProfile) throw new Error("Gagal hapus profil: " + errProfile.message);
           
-          toast.success(`User @${username} berhasil dihapus!`, { id: toastId });
+          toast.success(`User @${username} berhasil dimusnahkan!`, { id: toastId });
           fetchUsers(); // Refresh tabel
       } catch (err) {
-          toast.error("Gagal hapus: " + err.message, { id: toastId });
+          console.error(err);
+          toast.error("Gagal: " + err.message, { id: toastId });
       }
   };
 
