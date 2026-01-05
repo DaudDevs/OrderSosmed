@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send
+  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2
 } from 'lucide-react';
 
 // ==========================================
@@ -221,7 +221,7 @@ const AdminTicketView = () => {
     );
 };
 
-// --- HALAMAN ADMIN: ISI SALDO ---
+// --- HALAMAN ADMIN: ISI SALDO & KELOLA USER ---
 const AdminSaldoView = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [amount, setAmount] = useState('');
@@ -231,7 +231,8 @@ const AdminSaldoView = () => {
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
-    const { data } = await supabase.from('profiles').select('*').order('balance', { ascending: false }).limit(10);
+    // Ambil semua user urut berdasarkan saldo terbesar
+    const { data } = await supabase.from('profiles').select('*').order('balance', { ascending: false });
     if (data) setUsers(data);
   };
 
@@ -254,9 +255,25 @@ const AdminSaldoView = () => {
     setLoading(false);
   };
 
+  // --- FITUR BARU: DELETE USER ---
+  const handleDeleteUser = async (userId, username) => {
+      if(!confirm(`⚠️ PERINGATAN: Apakah Anda yakin ingin menghapus user @${username}? Data tidak bisa dikembalikan!`)) return;
+      
+      const toastId = toast.loading("Menghapus user...");
+      try {
+          const { error } = await supabase.from('profiles').delete().eq('id', userId);
+          if (error) throw error;
+          
+          toast.success(`User @${username} berhasil dihapus!`, { id: toastId });
+          fetchUsers(); // Refresh tabel
+      } catch (err) {
+          toast.error("Gagal hapus: " + err.message, { id: toastId });
+      }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
-      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 shadow-xl">
+      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 shadow-xl h-fit">
         <h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Key className="text-yellow-400"/> Admin: Isi Saldo</h3>
         <form onSubmit={handleTopUp} className="space-y-4">
           <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Username Member" value={targetUsername} onChange={e => setTargetUsername(e.target.value)} required />
@@ -264,8 +281,9 @@ const AdminSaldoView = () => {
           <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl mt-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Kirim Saldo'}</button>
         </form>
       </div>
+      
       <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 overflow-hidden shadow-xl">
-        <h3 className="font-bold text-white mb-4 text-lg">Top Member</h3>
+        <h3 className="font-bold text-white mb-4 text-lg">Kelola Member ({users.length})</h3>
         <div className="overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0">
           <table className="w-full text-sm text-left text-slate-300 min-w-[300px]">
             <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Saldo</th><th className="px-3 py-2 text-right">Aksi</th></tr></thead>
@@ -274,7 +292,17 @@ const AdminSaldoView = () => {
                 <tr key={u.id} className="hover:bg-slate-800/30">
                   <td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td>
                   <td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td>
-                  <td className="px-3 py-3 text-right"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button></td>
+                  <td className="px-3 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button>
+                        {/* TOMBOL DELETE USER */}
+                        {u.username !== ADMIN_USERNAME && (
+                            <button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40">
+                                <Trash2 size={14}/>
+                            </button>
+                        )}
+                      </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -383,537 +411,538 @@ const DashboardView = ({ profile, onNavigate }) => {
 };
 
 const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
-  const [selectedCatId, setSelectedCatId] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [target, setTarget] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCatId, setSelectedCatId] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [target, setTarget] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const getVal = (item, keys) => {
-    if (!item) return null;
-    for (let key of keys) { if (item[key] !== undefined && item[key] !== null && item[key] !== "") return item[key]; }
-    return null;
-  };
+  const getVal = (item, keys) => {
+    if (!item) return null;
+    for (let key of keys) { if (item[key] !== undefined && item[key] !== null && item[key] !== "") return item[key]; }
+    return null;
+  };
 
-  const validServices = Array.isArray(services) ? services : [];
-  const catIdKeys = ['category_id', 'cat_id', 'group_id'];
-  const catNameKeys = ['category', 'kategori', 'category_name'];
-  const srvIdKeys = ['id', 'service', 'num'];
-  const srvNameKeys = ['name', 'service_name', 'layanan'];
-  const priceKeys = ['price', 'rate', 'harga'];
+  const validServices = Array.isArray(services) ? services : [];
+  const catIdKeys = ['category_id', 'cat_id', 'group_id'];
+  const catNameKeys = ['category', 'kategori', 'category_name'];
+  const srvIdKeys = ['id', 'service', 'num'];
+  const srvNameKeys = ['name', 'service_name', 'layanan'];
+  const priceKeys = ['price', 'rate', 'harga'];
 
-  const searchedServices = validServices.filter(s => {
-      if (!searchTerm) return true; 
-      const term = searchTerm.toLowerCase();
-      const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
-      const cName = (getVal(s, catNameKeys) || '').toLowerCase();
-      const sId = String(getVal(s, srvIdKeys) || '');
-      return sName.includes(term) || cName.includes(term) || sId.includes(term);
-  });
+  const searchedServices = validServices.filter(s => {
+      if (!searchTerm) return true; 
+      const term = searchTerm.toLowerCase();
+      const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
+      const cName = (getVal(s, catNameKeys) || '').toLowerCase();
+      const sId = String(getVal(s, srvIdKeys) || '');
+      return sName.includes(term) || cName.includes(term) || sId.includes(term);
+  });
 
-  const categories = [];
-  const seenCats = new Set();
-  searchedServices.forEach(item => {
-      let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
-      let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
-      if (cId && !seenCats.has(String(cId))) { seenCats.add(String(cId)); categories.push({ id: cId, name: cName }); }
-  });
+  const categories = [];
+  const seenCats = new Set();
+  searchedServices.forEach(item => {
+      let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
+      let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
+      if (cId && !seenCats.has(String(cId))) { seenCats.add(String(cId)); categories.push({ id: cId, name: cName }); }
+  });
 
-  const filteredServices = searchedServices.filter(s => {
-      let sCatId = getVal(s, catIdKeys) || getVal(s, catNameKeys);
-      return selectedCatId ? String(sCatId) === String(selectedCatId) : false;
-  });
+  const filteredServices = searchedServices.filter(s => {
+      let sCatId = getVal(s, catIdKeys) || getVal(s, catNameKeys);
+      return selectedCatId ? String(sCatId) === String(selectedCatId) : false;
+  });
 
-  const currentService = validServices.find(s => String(getVal(s, srvIdKeys)) === String(selectedServiceId));
-  const modalPrice = currentService ? parseFloat(getVal(currentService, priceKeys) || 0) : 0;
-  const sellingPricePer1k = modalPrice + ((modalPrice * CONFIG.PROFIT_PERCENTAGE) / 100);
-  const totalPrice = quantity ? (sellingPricePer1k / 1000) * quantity : 0;
+  const currentService = validServices.find(s => String(getVal(s, srvIdKeys)) === String(selectedServiceId));
+  const modalPrice = currentService ? parseFloat(getVal(currentService, priceKeys) || 0) : 0;
+  const sellingPricePer1k = modalPrice + ((modalPrice * CONFIG.PROFIT_PERCENTAGE) / 100);
+  const totalPrice = quantity ? (sellingPricePer1k / 1000) * quantity : 0;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const toastId = toast.loading("Memproses pesanan...");
-    const result = await onOrder({ 
-        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
-    }, currentService);
-    if (result.success) {
-       toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
-       refreshProfile(); setTarget(''); setQuantity('');
-    } else {
-       toast.error(result.msg || 'Gagal order.', { id: toastId });
-    }
-    setLoading(false);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const toastId = toast.loading("Memproses pesanan...");
+    const result = await onOrder({ 
+        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
+    }, currentService);
+    if (result.success) {
+       toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
+       refreshProfile(); setTarget(''); setQuantity('');
+    } else {
+       toast.error(result.msg || 'Gagal order.', { id: toastId });
+    }
+    setLoading(false);
+  };
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-      <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
-        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-           <div className="relative">
-              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
-              <div className="relative">
-                  <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
-                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
-                  />
-                  <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
-              </div>
-           </div>
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+      <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+           <div className="relative">
+              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
+              <div className="relative">
+                  <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
+                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
+                  />
+                  <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
+              </div>
+           </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="md:col-span-2">
-                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
-                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
-                      <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
-                      {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
-                  </select>
-               </div>
-               <div className="md:col-span-2">
-                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
-                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
-                      <option value="">-- Pilih Layanan --</option>
-                      {filteredServices.map((s, i) => {
-                          const id = getVal(s, srvIdKeys);
-                          const name = getVal(s, srvNameKeys);
-                          const price = parseFloat(getVal(s, priceKeys) || 0);
-                          const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
-                          return <option key={i} value={id}>ID:{id} - {name} - {formatRupiah(sellPrice)}</option>
-                      })}
-                  </select>
-               </div>
-           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="md:col-span-2">
+                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
+                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
+                      <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
+                      {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
+                  </select>
+               </div>
+               <div className="md:col-span-2">
+                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
+                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
+                      <option value="">-- Pilih Layanan --</option>
+                      {filteredServices.map((s, i) => {
+                          const id = getVal(s, srvIdKeys);
+                          const name = getVal(s, srvNameKeys);
+                          const price = parseFloat(getVal(s, priceKeys) || 0);
+                          const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
+                          return <option key={i} value={id}>ID:{id} - {name} - {formatRupiah(sellPrice)}</option>
+                      })}
+                  </select>
+               </div>
+           </div>
 
-           {currentService && (
-             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200 animate-fade-in">
-                <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
-                <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
-                    <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
-                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: {formatRupiah(sellingPricePer1k)} / 1k</span>
-                </div>
-             </div>
-           )}
+           {currentService && (
+             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200 animate-fade-in">
+                <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
+                <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
+                    <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
+                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: {formatRupiah(sellingPricePer1k)} / 1k</span>
+                </div>
+             </div>
+           )}
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Target</label>
-                 <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Link / Username" value={target} onChange={e => setTarget(e.target.value)} required />
-              </div>
-              <div>
-                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Jumlah</label>
-                 <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
-              </div>
-           </div>
-           
-           <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
-             <div className="text-center md:text-left">
-                <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
-                <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
-             </div>
-             <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
-               {loading ? <Loader2 className="animate-spin mx-auto"/> : 'BELI SEKARANG'}
-             </button>
-           </div>
-        </form>
-      </div>
-      <div className="space-y-6">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
-           <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
-           <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
-              <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
-              <b className="text-white text-xl">{formatRupiah(balance)}</b>
-           </div>
-           {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
-        </div>
-      </div>
-    </div>
-  );
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Target</label>
+                 <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Link / Username" value={target} onChange={e => setTarget(e.target.value)} required />
+              </div>
+              <div>
+                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Jumlah</label>
+                 <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+              </div>
+           </div>
+           
+           <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+             <div className="text-center md:text-left">
+                <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
+                <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
+             </div>
+             <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
+               {loading ? <Loader2 className="animate-spin mx-auto"/> : 'BELI SEKARANG'}
+             </button>
+           </div>
+        </form>
+      </div>
+      <div className="space-y-6">
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
+           <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
+           <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
+              <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
+              <b className="text-white text-xl">{formatRupiah(balance)}</b>
+           </div>
+           {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
-    const [orders, setOrders] = useState([]);
-    const [loadingId, setLoadingId] = useState(null);
-    const [isBulkChecking, setIsBulkChecking] = useState(false);
+    const [orders, setOrders] = useState([]);
+    const [loadingId, setLoadingId] = useState(null);
+    const [isBulkChecking, setIsBulkChecking] = useState(false);
 
-    const fetchOrders = async () => {
-        const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-        if (data) setOrders(data);
-    };
+    const fetchOrders = async () => {
+        const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        if (data) setOrders(data);
+    };
 
-    useEffect(() => { fetchOrders(); }, [userId]);
+    useEffect(() => { fetchOrders(); }, [userId]);
 
-    const handleBulkCheck = async () => {
-        const pendingOrders = orders.filter(o => !['success', 'error', 'partial', 'completed', 'canceled'].includes(String(o.status).toLowerCase()));
-        if (pendingOrders.length === 0) { toast.success("Semua order sudah update!", { icon: '👌' }); return; }
+    const handleBulkCheck = async () => {
+        const pendingOrders = orders.filter(o => !['success', 'error', 'partial', 'completed', 'canceled'].includes(String(o.status).toLowerCase()));
+        if (pendingOrders.length === 0) { toast.success("Semua order sudah update!", { icon: '👌' }); return; }
 
-        setIsBulkChecking(true);
-        const toastId = toast.loading(`Mengecek ${pendingOrders.length} transaksi...`);
-        let updatedCount = 0;
-        for (const order of pendingOrders) {
-            const success = await onCheckStatus(order, null, true);
-            if (success) updatedCount++;
-        }
-        setIsBulkChecking(false);
-        toast.success(`${updatedCount} Data berhasil diperbarui!`, { id: toastId });
-        fetchOrders();
-    };
+        setIsBulkChecking(true);
+        const toastId = toast.loading(`Mengecek ${pendingOrders.length} transaksi...`);
+        let updatedCount = 0;
+        for (const order of pendingOrders) {
+            const success = await onCheckStatus(order, null, true);
+            if (success) updatedCount++;
+        }
+        setIsBulkChecking(false);
+        toast.success(`${updatedCount} Data berhasil diperbarui!`, { id: toastId });
+        fetchOrders();
+    };
 
-    const handleAction = async (action, order) => {
-        if (loadingId) return; setLoadingId(order.id);
-        const toastId = toast.loading("Memproses...");
-        try {
-            if (action === 'status') await onCheckStatus(order, toastId, false);
-            if (action === 'refill') await onRefill(order, toastId);
-        } catch (error) { toast.error("Error", { id: toastId }); }
-        setLoadingId(null); fetchOrders();
-    };
+    const handleAction = async (action, order) => {
+        if (loadingId) return; setLoadingId(order.id);
+        const toastId = toast.loading("Memproses...");
+        try {
+            if (action === 'status') await onCheckStatus(order, toastId, false);
+            if (action === 'refill') await onRefill(order, toastId);
+        } catch (error) { toast.error("Error", { id: toastId }); }
+        setLoadingId(null); fetchOrders();
+    };
 
-    const getStatusBadge = (status) => {
-        const s = String(status).toLowerCase();
-        if (s.includes('success') || s.includes('complet')) return 'bg-green-500/20 text-green-400 border-green-500/30';
-        if (s.includes('pending') || s.includes('process')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-        if (s.includes('error') || s.includes('cancel')) return 'bg-red-500/20 text-red-400 border-red-500/30';
-        if (s.includes('partial')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-        return 'bg-slate-700 text-slate-300 border-slate-600';
-    };
+    const getStatusBadge = (status) => {
+        const s = String(status).toLowerCase();
+        if (s.includes('success') || s.includes('complet')) return 'bg-green-500/20 text-green-400 border-green-500/30';
+        if (s.includes('pending') || s.includes('process')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        if (s.includes('error') || s.includes('cancel')) return 'bg-red-500/20 text-red-400 border-red-500/30';
+        if (s.includes('partial')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'bg-slate-700 text-slate-300 border-slate-600';
+    };
 
-    return (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-500 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
-                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
-                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
-                    <tbody className="divide-y divide-slate-700/50">
-                        {orders.map(o => (
-                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
-                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-slate-700/50 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-500 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
-                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-500">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
-                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
-                                <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getStatusBadge(o.status)}`}>{o.status}</span></td>
-                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
+    return (
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
+            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-500 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
+                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
+                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                        {orders.map(o => (
+                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
+                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-slate-700/50 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-500 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
+                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-500">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
+                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
+                                <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getStatusBadge(o.status)}`}>{o.status}</span></td>
+                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 };
 
 const DepositView = () => (
-    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 text-center shadow-xl">
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-                <CreditCard className="text-indigo-400"/> Deposit QRIS
-            </h3>
-            <p className="text-slate-400 text-sm mb-6">Otomatis dicek Admin. Bebas biaya admin.</p>
-            
-            <div className="bg-white p-4 rounded-2xl inline-block shadow-lg shadow-indigo-500/20 mb-6 relative group transform hover:scale-105 transition-all duration-300">
-                <div className="absolute inset-0 border-2 border-dashed border-slate-300 rounded-2xl m-2 pointer-events-none"></div>
-                <img src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" alt="QRIS Code" className="w-48 h-48 md:w-56 md:h-56 object-contain mx-auto"/>
-                <p className="text-slate-900 font-bold mt-2 text-xs tracking-[0.2em]">SCAN ME</p>
-            </div>
+    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 text-center shadow-xl">
+            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                <CreditCard className="text-indigo-400"/> Deposit QRIS
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">Otomatis dicek Admin. Bebas biaya admin.</p>
+            
+            <div className="bg-white p-4 rounded-2xl inline-block shadow-lg shadow-indigo-500/20 mb-6 relative group transform hover:scale-105 transition-all duration-300">
+                <div className="absolute inset-0 border-2 border-dashed border-slate-300 rounded-2xl m-2 pointer-events-none"></div>
+                <img src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" alt="QRIS Code" className="w-48 h-48 md:w-56 md:h-56 object-contain mx-auto"/>
+                <p className="text-slate-900 font-bold mt-2 text-xs tracking-[0.2em]">SCAN ME</p>
+            </div>
 
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-left text-sm space-y-3 mb-6">
-                <p className="text-slate-400 text-center text-xs mb-2 uppercase font-bold tracking-wider">Cara Deposit</p>
-                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">1</div><p className="text-slate-300 text-xs">Screenshot kode QR di atas.</p></div>
-                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">2</div><p className="text-slate-300 text-xs">Buka E-Wallet (DANA/Gopay) atau M-Banking.</p></div>
-                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">3</div><p className="text-slate-300 text-xs">Scan & Bayar. Min deposit <b>Rp 10.000</b>.</p></div>
-            </div>
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-left text-sm space-y-3 mb-6">
+                <p className="text-slate-400 text-center text-xs mb-2 uppercase font-bold tracking-wider">Cara Deposit</p>
+                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">1</div><p className="text-slate-300 text-xs">Screenshot kode QR di atas.</p></div>
+                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">2</div><p className="text-slate-300 text-xs">Buka E-Wallet (DANA/Gopay) atau M-Banking.</p></div>
+                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">3</div><p className="text-slate-300 text-xs">Scan & Bayar. Min deposit <b>Rp 10.000</b>.</p></div>
+            </div>
 
-            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
-                <MessageSquare size={18}/> Konfirmasi WhatsApp
-            </button>
-        </div>
-    </div>
+            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
+                <MessageSquare size={18}/> Konfirmasi WhatsApp
+            </button>
+        </div>
+    </div>
 );
 
 const LoginPage = () => {
-    const [isRegister, setIsRegister] = useState(false);
-    const [formData, setFormData] = useState({ email: '', password: '', username: '', fullname: '' });
-    const [loading, setLoading] = useState(false);
-    const [verificationSent, setVerificationSent] = useState(null);
+    const [isRegister, setIsRegister] = useState(false);
+    const [formData, setFormData] = useState({ email: '', password: '', username: '', fullname: '' });
+    const [loading, setLoading] = useState(false);
+    const [verificationSent, setVerificationSent] = useState(null);
 
-    const handleAuth = async (e) => {
-        e.preventDefault(); setLoading(true);
-        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Sedang Masuk...");
-        
-        try {
-            if (isRegister) {
-                const { data: authData, error: authError } = await supabase.auth.signUp({ 
-                    email: formData.email, password: formData.password,
-                    options: { emailRedirectTo: window.location.origin }
-                });
-                if (authError) throw authError;
-                if (authData.user) {
-                    await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
-                    toast.success("Sukses! Cek Email Anda.", { id: toastId });
-                    setVerificationSent(formData.email);
-                    setIsRegister(false);
-                }
-            } else {
-                const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
-                if (error) {
-                    if (error.message.includes("Email not confirmed")) {
-                        toast.error("Email belum diverifikasi! Cek inbox/spam.", { id: toastId });
-                        setVerificationSent(formData.email);
-                    } else { throw error; }
-                } else {
-                    toast.success("Berhasil Login!", { id: toastId });
-                }
-            }
-        } catch (error) { 
-            toast.error(error.message, { id: toastId });
-        } finally { setLoading(false); }
-    };
+    const handleAuth = async (e) => {
+        e.preventDefault(); setLoading(true);
+        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Sedang Masuk...");
+        
+        try {
+            if (isRegister) {
+                const { data: authData, error: authError } = await supabase.auth.signUp({ 
+                    email: formData.email, password: formData.password,
+                    options: { emailRedirectTo: window.location.origin }
+                });
+                if (authError) throw authError;
+                if (authData.user) {
+                    await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
+                    toast.success("Sukses! Cek Email Anda.", { id: toastId });
+                    setVerificationSent(formData.email);
+                    setIsRegister(false);
+                }
+            } else {
+                const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
+                if (error) {
+                    if (error.message.includes("Email not confirmed")) {
+                        toast.error("Email belum diverifikasi! Cek inbox/spam.", { id: toastId });
+                        setVerificationSent(formData.email);
+                    } else { throw error; }
+                } else {
+                    toast.success("Berhasil Login!", { id: toastId });
+                }
+            }
+        } catch (error) { 
+            toast.error(error.message, { id: toastId });
+        } finally { setLoading(false); }
+    };
 
-    return (
-        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-            <div className="w-full max-w-sm bg-[#1e293b] border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-1">SosmedKu</h1>
-                    <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
-                </div>
-                <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
-                
-                {verificationSent && !isRegister && (
-                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex gap-3 items-start animate-fade-in">
-                        <div className="p-1 bg-green-500 rounded-full text-white mt-0.5 shadow-lg shadow-green-500/30 flex-shrink-0"><Mail size={14} /></div>
-                        <div>
-                            <h4 className="text-green-400 font-bold text-sm mb-1">Cek Email Kamu!</h4>
-                            <p className="text-slate-400 text-xs leading-relaxed">
-                                Link verifikasi telah dikirim ke <b className="text-white">{verificationSent}</b>. 
-                                <br/><br/>Silakan cek <b>Inbox</b> atau <b>Spam</b> folder, lalu klik tombol verifikasi untuk Login.
-                            </p>
-                        </div>
-                    </div>
-                )}
+    return (
+        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-[#1e293b] border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl">
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-white mb-1">SosmedKu</h1>
+                    <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
+                </div>
+                <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
+                
+                {verificationSent && !isRegister && (
+                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex gap-3 items-start animate-fade-in">
+                        <div className="p-1 bg-green-500 rounded-full text-white mt-0.5 shadow-lg shadow-green-500/30 flex-shrink-0"><Mail size={14} /></div>
+                        <div>
+                            <h4 className="text-green-400 font-bold text-sm mb-1">Cek Email Kamu!</h4>
+                            <p className="text-slate-400 text-xs leading-relaxed">
+                                Link verifikasi telah dikirim ke <b className="text-white">{verificationSent}</b>. 
+                                <br/><br/>Silakan cek <b>Inbox</b> atau <b>Spam</b> folder, lalu klik tombol verifikasi untuk Login.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
-                <form onSubmit={handleAuth} className="space-y-4">
-                    {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
-                    <input type="email" placeholder="Email" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
-                    <input type="password" placeholder="Password" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, password: e.target.value})} required />
-                    <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : (isRegister ? 'Daftar Sekarang' : 'Masuk Dashboard')}</button>
-                </form>
-                <button onClick={() => setIsRegister(!isRegister)} className="block w-full text-center text-slate-400 mt-6 text-sm hover:text-white transition-colors">{isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}</button>
-            </div>
-        </div>
-    );
+                <form onSubmit={handleAuth} className="space-y-4">
+                    {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
+                    <input type="email" placeholder="Email" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
+                    <input type="password" placeholder="Password" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, password: e.target.value})} required />
+                    <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : (isRegister ? 'Daftar Sekarang' : 'Masuk Dashboard')}</button>
+                </form>
+                <button onClick={() => setIsRegister(!isRegister)} className="block w-full text-center text-slate-400 mt-6 text-sm hover:text-white transition-colors">{isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}</button>
+            </div>
+        </div>
+    );
 };
 
 // ==========================================
 // 5. MAIN APP LAYOUT (RESPONSIVE)
 // ==========================================
 const App = () => {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [services, setServices] = useState([]);
-  const [activePage, setActivePage] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false); 
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [services, setServices] = useState([]);
+  const [activePage, setActivePage] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false); 
 
-  useEffect(() => {
-      supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
-      supabase.auth.onAuthStateChange((_event, session) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
-  }, []);
+  useEffect(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
+      supabase.auth.onAuthStateChange((_event, session) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
+  }, []);
 
-  const fetchUserProfile = async (userId) => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (data) setProfile(data);
-  };
+  const fetchUserProfile = async (userId) => {
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (data) setProfile(data);
+  };
 
-  useEffect(() => {
-      if (session) {
-          const getServices = async () => {
-            try {
-                const res = await callApi('service', { action: 'services' });
-                if (res.data && Array.isArray(res.data.data)) setServices(res.data.data);
-            } catch (e) { console.error("Gagal load services", e); }
-          };
-          getServices();
-      }
-  }, [session]);
+  useEffect(() => {
+      if (session) {
+          const getServices = async () => {
+            try {
+                const res = await callApi('service', { action: 'services' });
+                if (res.data && Array.isArray(res.data.data)) setServices(res.data.data);
+            } catch (e) { console.error("Gagal load services", e); }
+          };
+          getServices();
+      }
+  }, [session]);
 
-  const handlePlaceOrder = async (data, details) => {
-     if (!profile) return { success: false, msg: 'Error' };
-     try {
-        const res = await callApi('order', { service: data.service, target: data.target, quantity: data.quantity });
-        if (res.data.status === true || res.data.response === true) {
-            const newBal = profile.balance - data.totalPrice;
-            await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
-            setProfile({ ...profile, balance: newBal });
-            await supabase.from('user_orders').insert([{
-                 user_id: session.user.id, service_name: details?.name, target: data.target, 
-                 quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
-                 status: 'Pending', provider_id: String(res.data.data.id)
-            }]);
-            return { success: true, orderId: res.data.data.id };
-        }
-        return { success: false, msg: 'Gagal dari pusat' };
-     } catch (e) { return { success: false, msg: 'Koneksi error' }; }
-  };
+  const handlePlaceOrder = async (data, details) => {
+     if (!profile) return { success: false, msg: 'Error' };
+     try {
+        const res = await callApi('order', { service: data.service, target: data.target, quantity: data.quantity });
+        if (res.data.status === true || res.data.response === true) {
+            const newBal = profile.balance - data.totalPrice;
+            await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
+            setProfile({ ...profile, balance: newBal });
+            await supabase.from('user_orders').insert([{
+                 user_id: session.user.id, service_name: details?.name, target: data.target, 
+                 quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
+                 status: 'Pending', provider_id: String(res.data.data.id)
+            }]);
+            return { success: true, orderId: res.data.data.id };
+        }
+        return { success: false, msg: 'Gagal dari pusat' };
+     } catch (e) { return { success: false, msg: 'Koneksi error' }; }
+  };
 
-  const handleCheckStatus = async (order, toastId = null, silent = false) => {
-      try {
-          const pId = order.provider_id;
-          if (!pId || pId === 'undefined' || pId === 'null') {
-              console.warn(`[Status] Order ID ${order.id} tidak punya Provider ID.`);
-              return false;
-          }
+  const handleCheckStatus = async (order, toastId = null, silent = false) => {
+      try {
+          const pId = order.provider_id;
+          if (!pId || pId === 'undefined' || pId === 'null') {
+              console.warn(`[Status] Order ID ${order.id} tidak punya Provider ID.`);
+              return false;
+          }
 
-          const res = await callApi('status', { id: pId, action: 'status' });
-          
-          if (res.data.status === true || res.data.response === true) {
-              const newData = res.data.data; // { status, start_count, remains }
-              
-              // --- LOGIKA AUTO REFUND ---
-              const statusLower = String(newData.status).toLowerCase();
-              let newStatus = newData.status;
-              let refundAmount = 0;
+          const res = await callApi('status', { id: pId, action: 'status' });
+          
+          if (res.data.status === true || res.data.response === true) {
+              const newData = res.data.data; // { status, start_count, remains }
+              
+              // --- LOGIKA AUTO REFUND ---
+              const statusLower = String(newData.status).toLowerCase();
+              let newStatus = newData.status;
+              let refundAmount = 0;
 
-              // Cek apakah status GAGAL / PARTIAL
-              if (['error', 'canceled', 'partial'].includes(statusLower) && order.status !== 'Refunded') {
-                  
-                  // Hitung Refund
-                  const pricePerItem = order.price / order.quantity;
-                  let itemsFailed = 0;
+              // Cek apakah status GAGAL / PARTIAL
+              if (['error', 'canceled', 'partial'].includes(statusLower) && order.status !== 'Refunded') {
+                  
+                  // Hitung Refund
+                  const pricePerItem = order.price / order.quantity;
+                  let itemsFailed = 0;
 
-                  if (statusLower === 'partial') {
-                      itemsFailed = parseInt(newData.remains) || 0; // Sisa yang tidak masuk
-                  } else {
-                      itemsFailed = order.quantity; // Semua gagal
-                  }
+                  if (statusLower === 'partial') {
+                      itemsFailed = parseInt(newData.remains) || 0; // Sisa yang tidak masuk
+                  } else {
+                      itemsFailed = order.quantity; // Semua gagal
+                  }
 
-                  refundAmount = Math.floor(itemsFailed * pricePerItem);
+                  refundAmount = Math.floor(itemsFailed * pricePerItem);
 
-                  if (refundAmount > 0) {
-                      // 1. Kembalikan Saldo User
-                      const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
-                      const currentBalance = userData?.balance || 0;
-                      await supabase.from('profiles').update({ balance: currentBalance + refundAmount }).eq('id', order.user_id);
-                      
-                      // 2. Tandai status jadi Refunded
-                      newStatus = `Refunded (${formatRupiah(refundAmount)})`;
-                      if (!silent) toast.success(`Auto Refund: ${formatRupiah(refundAmount)}`, { id: toastId });
-                  }
-              }
+                  if (refundAmount > 0) {
+                      // 1. Kembalikan Saldo User
+                      const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
+                      const currentBalance = userData?.balance || 0;
+                      await supabase.from('profiles').update({ balance: currentBalance + refundAmount }).eq('id', order.user_id);
+                      
+                      // 2. Tandai status jadi Refunded
+                      newStatus = `Refunded (${formatRupiah(refundAmount)})`;
+                      if (!silent) toast.success(`Auto Refund: ${formatRupiah(refundAmount)}`, { id: toastId });
+                  }
+              }
 
-              // Update Order di Database
-              await supabase.from('user_orders').update({ 
-                  status: newStatus, 
-                  start_count: newData.start_count, 
-                  remains: newData.remains 
-              }).eq('id', order.id);
+              // Update Order di Database
+              await supabase.from('user_orders').update({ 
+                  status: newStatus, 
+                  start_count: newData.start_count, 
+                  remains: newData.remains 
+              }).eq('id', order.id);
 
-              if (!silent && !refundAmount) toast.success(`Status: ${newData.status}`, { id: toastId });
-              return true; 
-          } else {
-              // Jika order hilang di pusat (Error Not Found), anggap Canceled & Refund Full
-              const errorMsg = res.data.data?.msg || "";
-              if (String(errorMsg).toLowerCase().includes('not found') && order.status !== 'Refunded') {
-                  
-                  // Refund Full
-                  const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
-                  const refund = order.price;
-                  
-                  await supabase.from('profiles').update({ balance: (userData?.balance || 0) + refund }).eq('id', order.user_id);
-                  await supabase.from('user_orders').update({ status: `Refunded (Not Found)` }).eq('id', order.id);
-                  
-                  if (!silent) toast.error(`Order Hilang -> Auto Refund ${formatRupiah(refund)}`, { id: toastId });
-                  return true;
-              }
-              return false;
-          }
-      } catch (err) { 
-          console.error(err);
-          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId });
-          return false;
-      }
-  };
+              if (!silent && !refundAmount) toast.success(`Status: ${newData.status}`, { id: toastId });
+              return true; 
+          } else {
+              // Jika order hilang di pusat (Error Not Found), anggap Canceled & Refund Full
+              const errorMsg = res.data.data?.msg || "";
+              if (String(errorMsg).toLowerCase().includes('not found') && order.status !== 'Refunded') {
+                  
+                  // Refund Full
+                  const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
+                  const refund = order.price;
+                  
+                  await supabase.from('profiles').update({ balance: (userData?.balance || 0) + refund }).eq('id', order.user_id);
+                  await supabase.from('user_orders').update({ status: `Refunded (Not Found)` }).eq('id', order.id);
+                  
+                  if (!silent) toast.error(`Order Hilang -> Auto Refund ${formatRupiah(refund)}`, { id: toastId });
+                  return true;
+              }
+              return false;
+          }
+      } catch (err) { 
+          console.error(err);
+          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId });
+          return false;
+      }
+  };
 
-  const handleRefill = async (order, toastId) => {
-      if(!confirm("Ajukan Refill?")) { toast.dismiss(toastId); return; }
-      try {
-          const res = await callApi('reffil', { id: order.provider_id || order.id, action: 'reffil' });
-          if (res.data.status === true || res.data.response === true) {
-              await supabase.from('user_orders').update({ refill_id: String(res.data.data.id) }).eq('id', order.id);
-              toast.success("Refill Berhasil!", { id: toastId });
-          } else { toast.error("Gagal Refill", { id: toastId }); }
-      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
-  };
+  const handleRefill = async (order, toastId) => {
+      if(!confirm("Ajukan Refill?")) { toast.dismiss(toastId); return; }
+      try {
+          const res = await callApi('reffil', { id: order.provider_id || order.id, action: 'reffil' });
+          if (res.data.status === true || res.data.response === true) {
+              await supabase.from('user_orders').update({ refill_id: String(res.data.data.id) }).eq('id', order.id);
+              toast.success("Refill Berhasil!", { id: toastId });
+          } else { toast.error("Gagal Refill", { id: toastId }); }
+      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
+  };
 
-  const handleLogout = async () => { await supabase.auth.signOut(); setProfile(null); };
+  const handleLogout = async () => { await supabase.auth.signOut(); setProfile(null); };
 
-  if (!session) return <LoginPage />;
-  
-  const isAdmin = profile?.username === ADMIN_USERNAME;
+  if (!session) return <LoginPage />;
+  
+  const isAdmin = profile?.username === ADMIN_USERNAME;
 
-  return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
-       <Toaster position="top-center" reverseOrder={false} toastOptions={{
-         style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
-         success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
-         error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-       }}/>
+  return (
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
+       <Toaster position="top-center" reverseOrder={false} toastOptions={{
+         style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
+         success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
+         error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+       }}/>
 
-       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>SosmedKu</span>
-             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
-          </div>
-          <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-             <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => { setActivePage('dashboard'); setSidebarOpen(false); }} />
-             <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => { setActivePage('order'); setSidebarOpen(false); }} />
-             <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => { setActivePage('history'); setSidebarOpen(false); }} />
-             <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => { setActivePage('deposit'); setSidebarOpen(false); }} />
-             
-             {/* MENU TIKET BARU (USER) */}
-             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => { setActivePage('ticket'); setSidebarOpen(false); }} />
+       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
+             <span>SosmedKu</span>
+             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
+          </div>
+          <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+             <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => { setActivePage('dashboard'); setSidebarOpen(false); }} />
+             <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => { setActivePage('order'); setSidebarOpen(false); }} />
+             <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => { setActivePage('history'); setSidebarOpen(false); }} />
+             <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => { setActivePage('deposit'); setSidebarOpen(false); }} />
+             
+             {/* MENU TIKET BARU (USER) */}
+             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => { setActivePage('ticket'); setSidebarOpen(false); }} />
 
-             {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-slate-700/50">
-                    <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
-                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
-                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
-                    {/* MENU ADMIN TIKET */}
-                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
-                </div>
-             )}
-             <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
-          </nav>
-       </aside>
+             {isAdmin && (
+                <div className="pt-4 mt-4 border-t border-slate-700/50">
+                    <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
+                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
+                    {/* MENU BARU UNTUK MONITORING ORDER */}
+                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
+                    {/* MENU ADMIN TIKET */}
+                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
+                </div>
+             )}
+             <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
+          </nav>
+       </aside>
 
-       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
 
-       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
-             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
-             <div className="flex items-center gap-4 ml-auto">
-                <div className="text-right">
-                    <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
-                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
-                </div>
-             </div>
-          </header>
+       <main className="flex-1 flex flex-col h-screen overflow-hidden">
+          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
+             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
+             <div className="flex items-center gap-4 ml-auto">
+                <div className="text-right">
+                    <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
+                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
+                </div>
+             </div>
+          </header>
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
-             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
-             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
-             {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
-             {activePage === 'deposit' && <DepositView />}
-             {activePage === 'ticket' && <TicketView userId={session.user.id} />}
-             
-             {/* HALAMAN ADMIN */}
-             {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
-             {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
-             {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
-          </div>
-       </main>
-    </div>
-  );
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
+             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
+             {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
+             {activePage === 'deposit' && <DepositView />}
+             {activePage === 'ticket' && <TicketView userId={session.user.id} />}
+             
+             {/* HALAMAN ADMIN */}
+             {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
+             {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
+             {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
+          </div>
+       </main>
+    </div>
+  );
 };
 
 export default App;
