@@ -607,36 +607,30 @@ const App = () => {
       }
   }, [session]);
 
-  const handlePlaceOrder = async (data, details) => {
-     if (!profile) return { success: false, msg: 'Error' };
-     try {
-        const res = await callApi('order', { service: data.service, target: data.target, quantity: data.quantity });
-        if (res.data.status === true || res.data.response === true) {
-            const newBal = profile.balance - data.totalPrice;
-            await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
-            setProfile({ ...profile, balance: newBal });
-            await supabase.from('user_orders').insert([{
-                 user_id: session.user.id, service_name: details?.name, target: data.target, 
-                 quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
-                 status: 'Pending', provider_id: String(res.data.data.id)
-            }]);
-            return { success: true, orderId: res.data.data.id };
-        }
-        return { success: false, msg: 'Gagal dari pusat' };
-     } catch (e) { return { success: false, msg: 'Koneksi error' }; }
-  };
-
- // MODIFIKASI: Tambahkan parameter 'silent' agar tidak berisik saat cek massal
-  const handleCheckStatus = async (order, toastId = null, silent = false) => {
+const handleCheckStatus = async (order, toastId = null, silent = false) => {
       try {
-          // Panggil API Status
-          const res = await callApi('status', { id: order.provider_id || order.id, action: 'status' });
-          
-          // Cek apakah respon valid
+          // 1. Validasi Provider ID
+          const pId = order.provider_id;
+          if (!pId || pId === 'undefined' || pId === 'null') {
+              console.warn(`[Status] Order ID ${order.id} tidak punya Provider ID.`);
+              if (!silent) toast.error(`Gagal: Order #${order.id} tidak terdaftar di Pusat (Provider ID Kosong)`, { id: toastId });
+              return false;
+          }
+
+          // 2. Panggil API
+          console.log(`[Status] Mengecek Order Provider ID: ${pId}...`);
+          const res = await callApi('status', { id: pId, action: 'status' });
+          console.log("[Status] Respon Pusat:", res.data); // Cek Console browser (F12) untuk melihat ini
+
+          // 3. Cek Respon
           if (res.data.status === true || res.data.response === true) {
-              const newData = res.data.data; // Data dari pusat (status, start_count, remains)
+              const newData = res.data.data; // Format: { status, start_count, remains }
               
-              // Update ke Supabase
+              if (!newData) {
+                  throw new Error("Data kosong dari pusat");
+              }
+
+              // 4. Update ke Database Supabase
               const { error } = await supabase.from('user_orders').update({ 
                   status: newData.status, 
                   start_count: newData.start_count, 
@@ -645,20 +639,29 @@ const App = () => {
 
               if (error) throw error;
 
-              // Notifikasi (Hanya jika tidak silent)
               if (!silent) {
-                  const msg = `Status: ${newData.status} | Sisa: ${newData.remains}`;
-                  if(toastId) toast.success(msg, { id: toastId });
-                  else toast.success(msg);
+                  toast.success(`Status: ${newData.status}`, { id: toastId });
               }
-              return true; // Berhasil update
-          } else { 
-              if(!silent && toastId) toast.error("Gagal cek status", { id: toastId });
+              return true; 
+          } else {
+              // Jika Gagal dari Pusat (Misal: Order Not Found)
+              const errorMsg = res.data.data?.msg || "Gagal dari pusat";
+              console.error(`[Status] Gagal: ${errorMsg}`);
+              
+              if (!silent) {
+                  // Jika order tidak ditemukan di pusat, update status jadi Error di database kita
+                  if (String(errorMsg).toLowerCase().includes('not found')) {
+                      await supabase.from('user_orders').update({ status: 'Error (Not Found)' }).eq('id', order.id);
+                      toast.error("Order tidak ditemukan di pusat (Status diubah ke Error)", { id: toastId });
+                  } else {
+                      toast.error(`Pusat: ${errorMsg}`, { id: toastId });
+                  }
+              }
               return false;
           }
       } catch (err) { 
-          console.error(err);
-          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId });
+          console.error("[Status] System Error:", err);
+          if(!silent && toastId) toast.error("Koneksi Error (Cek Console)", { id: toastId });
           return false;
       }
   };
