@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail, ListOrdered
+  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send
 } from 'lucide-react';
 
 // ==========================================
@@ -68,8 +68,158 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
 };
 
 // ==========================================
-// 3. PAGE COMPONENTS
+// 3. PAGE COMPONENTS (USER & ADMIN)
 // ==========================================
+
+// --- USER: TIKET BANTUAN ---
+const TicketView = ({ userId }) => {
+    const [tickets, setTickets] = useState([]);
+    const [subject, setSubject] = useState('');
+    const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => { fetchTickets(); }, [userId]);
+
+    const fetchTickets = async () => {
+        const { data } = await supabase.from('tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        if (data) setTickets(data);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const toastId = toast.loading("Mengirim tiket...");
+        try {
+            const { error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message }]);
+            if (error) throw error;
+            toast.success("Tiket terkirim! Tunggu balasan Admin.", { id: toastId });
+            setSubject(''); setMessage(''); fetchTickets();
+        } catch (err) { toast.error("Gagal kirim tiket", { id: toastId }); }
+        setLoading(false);
+    };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+            {/* Form Buat Tiket */}
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
+                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><LifeBuoy className="text-orange-400"/> Buat Tiket Baru</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <input type="text" placeholder="Subjek (Misal: Order Pending Lama)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={subject} onChange={e => setSubject(e.target.value)} required />
+                    <textarea placeholder="Jelaskan masalahmu secara detail..." rows="4" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={message} onChange={e => setMessage(e.target.value)} required></textarea>
+                    <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+                        {loading ? <Loader2 className="animate-spin"/> : <><Send size={16}/> Kirim Tiket</>}
+                    </button>
+                </form>
+            </div>
+
+            {/* List Tiket */}
+            <div className="space-y-4">
+                <h3 className="font-bold text-white mb-2">Riwayat Tiket</h3>
+                {tickets.length === 0 && <p className="text-slate-500 text-sm">Belum ada tiket.</p>}
+                {tickets.map(t => (
+                    <div key={t.id} className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 shadow-lg">
+                        <div className="flex justify-between items-start mb-3">
+                            <h4 className="font-bold text-white text-sm">{t.subject}</h4>
+                            <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{t.status}</span>
+                        </div>
+                        <p className="text-slate-300 text-xs bg-slate-800/50 p-3 rounded-lg mb-3">"{t.message}"</p>
+                        {t.admin_reply ? (
+                            <div className="bg-indigo-500/10 border-l-4 border-indigo-500 p-3 rounded-r-lg">
+                                <p className="text-[10px] text-indigo-300 font-bold mb-1">Balasan Admin:</p>
+                                <p className="text-slate-200 text-xs">{t.admin_reply}</p>
+                            </div>
+                        ) : (
+                            <p className="text-[10px] text-slate-500 italic">Menunggu balasan admin...</p>
+                        )}
+                        <p className="text-[10px] text-slate-600 mt-2 text-right">{new Date(t.created_at).toLocaleString()}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// --- ADMIN: KELOLA TIKET ---
+const AdminTicketView = () => {
+    const [tickets, setTickets] = useState([]);
+    const [replyMsg, setReplyMsg] = useState('');
+    const [selectedId, setSelectedId] = useState(null);
+
+    useEffect(() => { fetchTickets(); }, []);
+
+    const fetchTickets = async () => {
+        const { data } = await supabase.from('tickets').select('*, profiles(username)').order('created_at', { ascending: false });
+        if (data) setTickets(data);
+    };
+
+    const handleReply = async (id) => {
+        if (!replyMsg) return toast.error("Balasan tidak boleh kosong");
+        const toastId = toast.loading("Mengirim balasan...");
+        
+        const { error } = await supabase.from('tickets').update({ 
+            admin_reply: replyMsg, 
+            status: 'Replied' 
+        }).eq('id', id);
+
+        if (!error) {
+            toast.success("Berhasil dibalas!", { id: toastId });
+            setReplyMsg(''); setSelectedId(null); fetchTickets();
+        } else {
+            toast.error("Gagal membalas", { id: toastId });
+        }
+    };
+
+    return (
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
+            <div className="p-6 border-b border-slate-700/50">
+                <h3 className="font-bold text-white text-lg flex items-center gap-2"><MessageSquare className="text-indigo-400"/> Kelola Tiket User</h3>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-300">
+                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px]">
+                        <tr>
+                            <th className="px-6 py-3">User / Tanggal</th>
+                            <th className="px-6 py-3">Pesan</th>
+                            <th className="px-6 py-3">Status</th>
+                            <th className="px-6 py-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                        {tickets.map(t => (
+                            <tr key={t.id} className="hover:bg-slate-800/30">
+                                <td className="px-6 py-4">
+                                    <div className="font-bold text-white">@{t.profiles?.username || 'User'}</div>
+                                    <div className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</div>
+                                </td>
+                                <td className="px-6 py-4 max-w-xs">
+                                    <div className="text-xs font-bold text-indigo-300 mb-1">{t.subject}</div>
+                                    <div className="text-xs text-slate-400 mb-2">"{t.message}"</div>
+                                    {t.admin_reply && <div className="text-[10px] text-green-400 bg-green-500/10 p-2 rounded">✅: {t.admin_reply}</div>}
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${t.status === 'Open' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'}`}>{t.status}</span>
+                                </td>
+                                <td className="px-6 py-4">
+                                    {selectedId === t.id ? (
+                                        <div className="flex flex-col gap-2">
+                                            <input autoFocus type="text" className="bg-[#0f172a] border border-slate-600 rounded px-2 py-1 text-xs text-white" placeholder="Ketik balasan..." value={replyMsg} onChange={e => setReplyMsg(e.target.value)} />
+                                            <div className="flex gap-2">
+                                                <button onClick={() => handleReply(t.id)} className="bg-green-600 text-white px-2 py-1 rounded text-xs">Kirim</button>
+                                                <button onClick={() => setSelectedId(null)} className="bg-slate-600 text-white px-2 py-1 rounded text-xs">Batal</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <button onClick={() => { setSelectedId(t.id); setReplyMsg(t.admin_reply || ''); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-xs">Balas</button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
 
 // --- HALAMAN ADMIN: ISI SALDO ---
 const AdminSaldoView = () => {
@@ -135,7 +285,7 @@ const AdminSaldoView = () => {
   );
 };
 
-// --- HALAMAN ADMIN: MONITORING ORDER (BARU) ---
+// --- HALAMAN ADMIN: MONITORING ORDER ---
 const AdminOrderView = ({ onCheckStatus }) => {
     const [orders, setOrders] = useState([]);
     const [search, setSearch] = useState('');
@@ -144,13 +294,7 @@ const AdminOrderView = ({ onCheckStatus }) => {
     useEffect(() => { fetchAllOrders(); }, []);
 
     const fetchAllOrders = async () => {
-        // Ambil semua order, join dengan tabel profiles untuk dapat username
-        const { data, error } = await supabase
-            .from('user_orders')
-            .select('*, profiles(username)')
-            .order('created_at', { ascending: false })
-            .limit(50); // Ambil 50 order terakhir biar ringan
-        
+        const { data, error } = await supabase.from('user_orders').select('*, profiles(username)').order('created_at', { ascending: false }).limit(50);
         if (data) setOrders(data);
     };
 
@@ -158,8 +302,8 @@ const AdminOrderView = ({ onCheckStatus }) => {
         if (loadingId) return; setLoadingId(order.id);
         const toastId = toast.loading("Cek Status...");
         try {
-            await onCheckStatus(order, toastId); // Gunakan fungsi cek status global
-            fetchAllOrders(); // Refresh table
+            await onCheckStatus(order, toastId); 
+            fetchAllOrders(); 
         } catch (error) { toast.error("Gagal", { id: toastId }); }
         setLoadingId(null);
     };
@@ -182,14 +326,7 @@ const AdminOrderView = ({ onCheckStatus }) => {
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-slate-300 min-w-[800px]">
                     <thead className="bg-slate-800 text-slate-400 uppercase text-[10px]">
-                        <tr>
-                            <th className="px-4 py-3">ID / User</th>
-                            <th className="px-4 py-3">Layanan</th>
-                            <th className="px-4 py-3">Target</th>
-                            <th className="px-4 py-3">Harga/Modal</th>
-                            <th className="px-4 py-3">Status</th>
-                            <th className="px-4 py-3 text-center">Cek</th>
-                        </tr>
+                        <tr><th className="px-4 py-3">ID / User</th><th className="px-4 py-3">Layanan</th><th className="px-4 py-3">Target</th><th className="px-4 py-3">Harga/Modal</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-center">Cek</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/50">
                         {filteredOrders.map(o => (
@@ -201,18 +338,9 @@ const AdminOrderView = ({ onCheckStatus }) => {
                                 </td>
                                 <td className="px-4 py-3 text-xs max-w-[200px] truncate">{o.service_name}</td>
                                 <td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td>
-                                <td className="px-4 py-3">
-                                    <div className="text-green-400 font-bold">{formatRupiah(o.price)}</div>
-                                    <div className="text-[10px] text-slate-500">Modal: {formatRupiah(o.modal)}</div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : String(o.status).toLowerCase().includes('pending') ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                    <button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">
-                                        {loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
-                                    </button>
-                                </td>
+                                <td className="px-4 py-3"><div className="text-green-400 font-bold">{formatRupiah(o.price)}</div><div className="text-[10px] text-slate-500">Modal: {formatRupiah(o.modal)}</div></td>
+                                <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span></td>
+                                <td className="px-4 py-3 text-center"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}</button></td>
                             </tr>
                         ))}
                     </tbody>
@@ -406,65 +534,67 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
 const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
     const [orders, setOrders] = useState([]);
     const [loadingId, setLoadingId] = useState(null);
+    const [isBulkChecking, setIsBulkChecking] = useState(false);
 
-    useEffect(() => {
-        const fetchOrders = async () => {
-            const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-            if (data) setOrders(data);
-        };
+    const fetchOrders = async () => {
+        const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        if (data) setOrders(data);
+    };
+
+    useEffect(() => { fetchOrders(); }, [userId]);
+
+    const handleBulkCheck = async () => {
+        const pendingOrders = orders.filter(o => !['success', 'error', 'partial', 'completed', 'canceled'].includes(String(o.status).toLowerCase()));
+        if (pendingOrders.length === 0) { toast.success("Semua order sudah update!", { icon: '👌' }); return; }
+
+        setIsBulkChecking(true);
+        const toastId = toast.loading(`Mengecek ${pendingOrders.length} transaksi...`);
+        let updatedCount = 0;
+        for (const order of pendingOrders) {
+            const success = await onCheckStatus(order, null, true);
+            if (success) updatedCount++;
+        }
+        setIsBulkChecking(false);
+        toast.success(`${updatedCount} Data berhasil diperbarui!`, { id: toastId });
         fetchOrders();
-    }, [userId]);
+    };
 
     const handleAction = async (action, order) => {
         if (loadingId) return; setLoadingId(order.id);
         const toastId = toast.loading("Memproses...");
         try {
-            if (action === 'status') await onCheckStatus(order, toastId);
+            if (action === 'status') await onCheckStatus(order, toastId, false);
             if (action === 'refill') await onRefill(order, toastId);
-        } catch (error) { 
-            toast.error("Error Sistem", { id: toastId });
-        }
-        setLoadingId(null); 
-        const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-        if (data) setOrders(data);
+        } catch (error) { toast.error("Error", { id: toastId }); }
+        setLoadingId(null); fetchOrders();
+    };
+
+    const getStatusBadge = (status) => {
+        const s = String(status).toLowerCase();
+        if (s.includes('success') || s.includes('complet')) return 'bg-green-500/20 text-green-400 border-green-500/30';
+        if (s.includes('pending') || s.includes('process')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        if (s.includes('error') || s.includes('cancel')) return 'bg-red-500/20 text-red-400 border-red-500/30';
+        if (s.includes('partial')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'bg-slate-700 text-slate-300 border-slate-600';
     };
 
     return (
         <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-5 md:p-6 border-b border-slate-700/50 flex justify-between items-center">
-                <h3 className="font-bold text-white text-lg">Riwayat Pesanan</h3>
-                <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">{orders.length} Transaksi</span>
+            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-500 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
+                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-300 min-w-[600px]">
-                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-4 py-3">ID / Tgl</th><th className="px-4 py-3">Target</th><th className="px-4 py-3">Info</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-center">Aksi</th></tr></thead>
+                <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
+                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
                     <tbody className="divide-y divide-slate-700/50">
                         {orders.map(o => (
-                            <tr key={o.id} className="hover:bg-slate-800/30">
-                                <td className="px-4 py-3">
-                                    <div className="font-bold text-white">#{o.provider_id || o.id}</div>
-                                    <div className="text-[10px] text-slate-500">{new Date(o.created_at).toLocaleDateString()}</div>
-                                    {o.refill_id && <div className="text-[10px] text-green-400 mt-1 bg-green-500/10 px-1 rounded w-fit">Refill: #{o.refill_id}</div>}
-                                </td>
-                                <td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td>
-                                <td className="px-4 py-3">
-                                    <div className="text-xs">Qty: <span className="text-white font-bold">{o.quantity}</span></div>
-                                    <div className="text-[10px] text-slate-500">Start: {o.start_count || '-'}</div>
-                                    <div className="text-[10px] text-slate-500">Sisa: {o.remains || '-'}</div>
-                                </td>
-                                <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : String(o.status).toLowerCase().includes('pending') ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span></td>
-                                <td className="px-4 py-3 text-center">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">
-                                            {loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
-                                        </button>
-                                        {(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (
-                                            <button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all">
-                                                <RefreshCcw size={14}/>
-                                            </button>
-                                        )}
-                                    </div>
-                                </td>
+                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
+                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-slate-700/50 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-500 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
+                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-500">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
+                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
+                                <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getStatusBadge(o.status)}`}>{o.status}</span></td>
+                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
                             </tr>
                         ))}
                     </tbody>
@@ -607,9 +737,27 @@ const App = () => {
       }
   }, [session]);
 
-const handleCheckStatus = async (order, toastId = null, silent = false) => {
+  const handlePlaceOrder = async (data, details) => {
+     if (!profile) return { success: false, msg: 'Error' };
+     try {
+        const res = await callApi('order', { service: data.service, target: data.target, quantity: data.quantity });
+        if (res.data.status === true || res.data.response === true) {
+            const newBal = profile.balance - data.totalPrice;
+            await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
+            setProfile({ ...profile, balance: newBal });
+            await supabase.from('user_orders').insert([{
+                 user_id: session.user.id, service_name: details?.name, target: data.target, 
+                 quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
+                 status: 'Pending', provider_id: String(res.data.data.id)
+            }]);
+            return { success: true, orderId: res.data.data.id };
+        }
+        return { success: false, msg: 'Gagal dari pusat' };
+     } catch (e) { return { success: false, msg: 'Koneksi error' }; }
+  };
+
+  const handleCheckStatus = async (order, toastId = null, silent = false) => {
       try {
-          // 1. Validasi Provider ID
           const pId = order.provider_id;
           if (!pId || pId === 'undefined' || pId === 'null') {
               console.warn(`[Status] Order ID ${order.id} tidak punya Provider ID.`);
@@ -617,20 +765,17 @@ const handleCheckStatus = async (order, toastId = null, silent = false) => {
               return false;
           }
 
-          // 2. Panggil API
           console.log(`[Status] Mengecek Order Provider ID: ${pId}...`);
           const res = await callApi('status', { id: pId, action: 'status' });
-          console.log("[Status] Respon Pusat:", res.data); // Cek Console browser (F12) untuk melihat ini
+          console.log("[Status] Respon Pusat:", res.data);
 
-          // 3. Cek Respon
           if (res.data.status === true || res.data.response === true) {
-              const newData = res.data.data; // Format: { status, start_count, remains }
+              const newData = res.data.data;
               
               if (!newData) {
                   throw new Error("Data kosong dari pusat");
               }
 
-              // 4. Update ke Database Supabase
               const { error } = await supabase.from('user_orders').update({ 
                   status: newData.status, 
                   start_count: newData.start_count, 
@@ -644,12 +789,10 @@ const handleCheckStatus = async (order, toastId = null, silent = false) => {
               }
               return true; 
           } else {
-              // Jika Gagal dari Pusat (Misal: Order Not Found)
               const errorMsg = res.data.data?.msg || "Gagal dari pusat";
               console.error(`[Status] Gagal: ${errorMsg}`);
               
               if (!silent) {
-                  // Jika order tidak ditemukan di pusat, update status jadi Error di database kita
                   if (String(errorMsg).toLowerCase().includes('not found')) {
                       await supabase.from('user_orders').update({ status: 'Error (Not Found)' }).eq('id', order.id);
                       toast.error("Order tidak ditemukan di pusat (Status diubah ke Error)", { id: toastId });
@@ -701,12 +844,17 @@ const handleCheckStatus = async (order, toastId = null, silent = false) => {
              <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => { setActivePage('order'); setSidebarOpen(false); }} />
              <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => { setActivePage('history'); setSidebarOpen(false); }} />
              <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => { setActivePage('deposit'); setSidebarOpen(false); }} />
+             
+             {/* MENU TIKET BARU (USER) */}
+             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => { setActivePage('ticket'); setSidebarOpen(false); }} />
+
              {isAdmin && (
                 <div className="pt-4 mt-4 border-t border-slate-700/50">
                     <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
                     <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
-                    {/* MENU BARU UNTUK MONITORING ORDER */}
                     <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
+                    {/* MENU ADMIN TIKET */}
+                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
                 </div>
              )}
              <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
@@ -731,10 +879,12 @@ const handleCheckStatus = async (order, toastId = null, silent = false) => {
              {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
              {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
              {activePage === 'deposit' && <DepositView />}
+             {activePage === 'ticket' && <TicketView userId={session.user.id} />}
              
              {/* HALAMAN ADMIN */}
              {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
              {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
+             {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
           </div>
        </main>
     </div>
