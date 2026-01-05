@@ -741,213 +741,242 @@ const LoginPage = () => {
 // ==========================================
 // 5. MAIN APP LAYOUT (RESPONSIVE)
 // ==========================================
+// ==========================================
+// 5. MAIN APP LAYOUT (RESPONSIVE)
+// ==========================================
 const App = () => {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [services, setServices] = useState([]);
-  const [activePage, setActivePage] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false); 
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [services, setServices] = useState([]);
+  const [activePage, setActivePage] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false); 
 
-  useEffect(() => {
-      supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
-      supabase.auth.onAuthStateChange((_event, session) => { setSession(session); if (session) fetchUserProfile(session.user.id); });
-  }, []);
+  // 1. Cek Session Login
+  useEffect(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => { 
+          setSession(session); 
+          if (session) fetchUserProfile(session.user.id); 
+      });
 
-  const fetchUserProfile = async (userId) => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (data) setProfile(data);
-  };
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { 
+          setSession(session); 
+          if (session) {
+              fetchUserProfile(session.user.id);
+          } else {
+              setProfile(null); // Reset profil jika logout
+          }
+      });
 
-  useEffect(() => {
-      if (session) {
-          const getServices = async () => {
-            try {
-                const res = await callApi('service', { action: 'services' });
-                if (res.data && Array.isArray(res.data.data)) setServices(res.data.data);
-            } catch (e) { console.error("Gagal load services", e); }
-          };
-          getServices();
-      }
-  }, [session]);
+      return () => subscription.unsubscribe();
+  }, []);
 
-  const handlePlaceOrder = async (data, details) => {
-     if (!profile) return { success: false, msg: 'Error' };
-     try {
-        const res = await callApi('order', { service: data.service, target: data.target, quantity: data.quantity });
-        if (res.data.status === true || res.data.response === true) {
-            const newBal = profile.balance - data.totalPrice;
-            await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
-            setProfile({ ...profile, balance: newBal });
-            await supabase.from('user_orders').insert([{
-                 user_id: session.user.id, service_name: details?.name, target: data.target, 
-                 quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
-                 status: 'Pending', provider_id: String(res.data.data.id)
-            }]);
-            return { success: true, orderId: res.data.data.id };
-        }
-        return { success: false, msg: 'Gagal dari pusat' };
-     } catch (e) { return { success: false, msg: 'Koneksi error' }; }
-  };
+  // 2. Ambil Data Profil
+  const fetchUserProfile = async (userId) => {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      
+      // JIKA DATA PROFIL HILANG (DIHAPUS ADMIN), PAKSA LOGOUT
+      if (error || !data) {
+          console.warn("User tidak ditemukan, melakukan auto logout...");
+          await supabase.auth.signOut();
+          setSession(null);
+          setProfile(null);
+          toast.error("Sesi berakhir atau akun dihapus.");
+          return;
+      }
+      
+      if (data) setProfile(data);
+  };
 
-  const handleCheckStatus = async (order, toastId = null, silent = false) => {
-      try {
-          const pId = order.provider_id;
-          if (!pId || pId === 'undefined' || pId === 'null') {
-              console.warn(`[Status] Order ID ${order.id} tidak punya Provider ID.`);
-              return false;
-          }
+  // 3. CCTV PENGHAPUSAN AKUN (METODE POLLING - ANTI GAGAL)
+  useEffect(() => {
+      // Jika tidak ada user login, tidak perlu cek
+      if (!session?.user?.id) return;
 
-          const res = await callApi('status', { id: pId, action: 'status' });
-          
-          if (res.data.status === true || res.data.response === true) {
-              const newData = res.data.data; // { status, start_count, remains }
-              
-              // --- LOGIKA AUTO REFUND ---
-              const statusLower = String(newData.status).toLowerCase();
-              let newStatus = newData.status;
-              let refundAmount = 0;
+      // Fungsi pengecekan
+      const checkAccountStatus = async () => {
+          // Coba cari data diri sendiri di tabel profiles
+          const { data, error } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', session.user.id)
+              .maybeSingle(); // Gunakan maybeSingle agar tidak error merah di console jika kosong
 
-              // Cek apakah status GAGAL / PARTIAL
-              if (['error', 'canceled', 'partial'].includes(statusLower) && order.status !== 'Refunded') {
-                  
-                  // Hitung Refund
-                  const pricePerItem = order.price / order.quantity;
-                  let itemsFailed = 0;
+          // Logika: Jika data tidak ditemukan (null), berarti sudah dihapus Admin
+          if (!data) {
+              console.warn("Akun tidak ditemukan di database. Melakukan logout paksa...");
+              toast.error("Sesi berakhir: Akun Anda telah dihapus.", { duration: 5000 });
+              
+              await supabase.auth.signOut();
+              setSession(null);
+              setProfile(null);
+          }
+      };
 
-                  if (statusLower === 'partial') {
-                      itemsFailed = parseInt(newData.remains) || 0; // Sisa yang tidak masuk
-                  } else {
-                      itemsFailed = order.quantity; // Semua gagal
-                  }
+      // Jalankan pengecekan setiap 5 detik (5000 ms)
+      const intervalId = setInterval(checkAccountStatus, 5000);
 
-                  refundAmount = Math.floor(itemsFailed * pricePerItem);
+      // Bersihkan timer saat komponen di-unmount
+      return () => clearInterval(intervalId);
+  }, [session]);
 
-                  if (refundAmount > 0) {
-                      // 1. Kembalikan Saldo User
-                      const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
-                      const currentBalance = userData?.balance || 0;
-                      await supabase.from('profiles').update({ balance: currentBalance + refundAmount }).eq('id', order.user_id);
-                      
-                      // 2. Tandai status jadi Refunded
-                      newStatus = `Refunded (${formatRupiah(refundAmount)})`;
-                      if (!silent) toast.success(`Auto Refund: ${formatRupiah(refundAmount)}`, { id: toastId });
-                  }
-              }
+  // 4. Ambil Layanan (Hanya jika login)
+  useEffect(() => {
+      if (session) {
+          const getServices = async () => {
+            try {
+                const res = await callApi('service', { action: 'services' });
+                if (res.data && Array.isArray(res.data.data)) setServices(res.data.data);
+            } catch (e) { console.error("Gagal load services", e); }
+          };
+          getServices();
+      }
+  }, [session]);
 
-              // Update Order di Database
-              await supabase.from('user_orders').update({ 
-                  status: newStatus, 
-                  start_count: newData.start_count, 
-                  remains: newData.remains 
-              }).eq('id', order.id);
+  // --- Logic Transaksi dll (Tidak Berubah) ---
+  const handlePlaceOrder = async (data, details) => {
+     if (!profile) return { success: false, msg: 'Error' };
+     try {
+        const res = await callApi('order', { service: data.service, target: data.target, quantity: data.quantity });
+        if (res.data.status === true || res.data.response === true) {
+            const newBal = profile.balance - data.totalPrice;
+            await supabase.from('profiles').update({ balance: newBal }).eq('id', session.user.id);
+            setProfile({ ...profile, balance: newBal });
+            await supabase.from('user_orders').insert([{
+                 user_id: session.user.id, service_name: details?.name, target: data.target, 
+                 quantity: data.quantity, price: data.totalPrice, modal: (data.modalPricePer1k/1000)*data.quantity,
+                 status: 'Pending', provider_id: String(res.data.data.id)
+            }]);
+            return { success: true, orderId: res.data.data.id };
+        }
+        return { success: false, msg: 'Gagal dari pusat' };
+     } catch (e) { return { success: false, msg: 'Koneksi error' }; }
+  };
 
-              if (!silent && !refundAmount) toast.success(`Status: ${newData.status}`, { id: toastId });
-              return true; 
-          } else {
-              // Jika order hilang di pusat (Error Not Found), anggap Canceled & Refund Full
-              const errorMsg = res.data.data?.msg || "";
-              if (String(errorMsg).toLowerCase().includes('not found') && order.status !== 'Refunded') {
-                  
-                  // Refund Full
-                  const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
-                  const refund = order.price;
-                  
-                  await supabase.from('profiles').update({ balance: (userData?.balance || 0) + refund }).eq('id', order.user_id);
-                  await supabase.from('user_orders').update({ status: `Refunded (Not Found)` }).eq('id', order.id);
-                  
-                  if (!silent) toast.error(`Order Hilang -> Auto Refund ${formatRupiah(refund)}`, { id: toastId });
-                  return true;
-              }
-              return false;
-          }
-      } catch (err) { 
-          console.error(err);
-          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId });
-          return false;
-      }
-  };
+  const handleCheckStatus = async (order, toastId = null, silent = false) => {
+      try {
+          const pId = order.provider_id;
+          if (!pId || pId === 'undefined' || pId === 'null') return false;
 
-  const handleRefill = async (order, toastId) => {
-      if(!confirm("Ajukan Refill?")) { toast.dismiss(toastId); return; }
-      try {
-          const res = await callApi('reffil', { id: order.provider_id || order.id, action: 'reffil' });
-          if (res.data.status === true || res.data.response === true) {
-              await supabase.from('user_orders').update({ refill_id: String(res.data.data.id) }).eq('id', order.id);
-              toast.success("Refill Berhasil!", { id: toastId });
-          } else { toast.error("Gagal Refill", { id: toastId }); }
-      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
-  };
+          const res = await callApi('status', { id: pId, action: 'status' });
+          if (res.data.status === true || res.data.response === true) {
+              const newData = res.data.data;
+              if (!newData) throw new Error("Data kosong");
 
-  const handleLogout = async () => { await supabase.auth.signOut(); setProfile(null); };
+              // LOGIKA AUTO REFUND
+              const statusLower = String(newData.status).toLowerCase();
+              let newStatus = newData.status;
+              let refundAmount = 0;
 
-  if (!session) return <LoginPage />;
-  
-  const isAdmin = profile?.username === ADMIN_USERNAME;
+              if (['error', 'canceled', 'partial'].includes(statusLower) && order.status !== 'Refunded') {
+                  const pricePerItem = order.price / order.quantity;
+                  let itemsFailed = statusLower === 'partial' ? (parseInt(newData.remains) || 0) : order.quantity;
+                  refundAmount = Math.floor(itemsFailed * pricePerItem);
 
-  return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
-       <Toaster position="top-center" reverseOrder={false} toastOptions={{
-         style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
-         success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
-         error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-       }}/>
+                  if (refundAmount > 0) {
+                      const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
+                      const currentBalance = userData?.balance || 0;
+                      await supabase.from('profiles').update({ balance: currentBalance + refundAmount }).eq('id', order.user_id);
+                      newStatus = `Refunded (${formatRupiah(refundAmount)})`;
+                      if (!silent) toast.success(`Auto Refund: ${formatRupiah(refundAmount)}`, { id: toastId });
+                  }
+              }
 
-       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>SosmedKu</span>
-             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
-          </div>
-          <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-             <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => { setActivePage('dashboard'); setSidebarOpen(false); }} />
-             <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => { setActivePage('order'); setSidebarOpen(false); }} />
-             <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => { setActivePage('history'); setSidebarOpen(false); }} />
-             <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => { setActivePage('deposit'); setSidebarOpen(false); }} />
-             
-             {/* MENU TIKET BARU (USER) */}
-             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => { setActivePage('ticket'); setSidebarOpen(false); }} />
+              await supabase.from('user_orders').update({ 
+                  status: newStatus, start_count: newData.start_count, remains: newData.remains 
+              }).eq('id', order.id);
 
-             {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-slate-700/50">
-                    <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
-                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
-                    {/* MENU BARU UNTUK MONITORING ORDER */}
-                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
-                    {/* MENU ADMIN TIKET */}
-                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
-                </div>
-             )}
-             <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
-          </nav>
-       </aside>
+              if (!silent && !refundAmount) toast.success(`Status: ${newData.status}`, { id: toastId });
+              return true; 
+          } else {
+              const errorMsg = res.data.data?.msg || "";
+              if (String(errorMsg).toLowerCase().includes('not found') && order.status !== 'Refunded') {
+                  const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
+                  const refund = order.price;
+                  await supabase.from('profiles').update({ balance: (userData?.balance || 0) + refund }).eq('id', order.user_id);
+                  await supabase.from('user_orders').update({ status: `Refunded (Not Found)` }).eq('id', order.id);
+                  if (!silent) toast.error(`Order Hilang -> Auto Refund ${formatRupiah(refund)}`, { id: toastId });
+                  return true;
+              }
+              return false;
+          }
+      } catch (err) { if(!silent && toastId) toast.error("Koneksi Error", { id: toastId }); return false; }
+  };
 
-       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+  const handleRefill = async (order, toastId) => {
+      if(!confirm("Ajukan Refill?")) { toast.dismiss(toastId); return; }
+      try {
+          const res = await callApi('reffil', { id: order.provider_id || order.id, action: 'reffil' });
+          if (res.data.status === true || res.data.response === true) {
+              await supabase.from('user_orders').update({ refill_id: String(res.data.data.id) }).eq('id', order.id);
+              toast.success("Refill Berhasil!", { id: toastId });
+          } else { toast.error("Gagal Refill", { id: toastId }); }
+      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
+  };
 
-       <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
-             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
-             <div className="flex items-center gap-4 ml-auto">
-                <div className="text-right">
-                    <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
-                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
-                </div>
-             </div>
-          </header>
+  const handleLogout = async () => { await supabase.auth.signOut(); setProfile(null); };
 
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
-             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
-             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
-             {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
-             {activePage === 'deposit' && <DepositView />}
-             {activePage === 'ticket' && <TicketView userId={session.user.id} />}
-             
-             {/* HALAMAN ADMIN */}
-             {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
-             {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
-             {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
-          </div>
-       </main>
-    </div>
-  );
+  if (!session) return <LoginPage />;
+  const isAdmin = profile?.username === ADMIN_USERNAME;
+
+  return (
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
+       <Toaster position="top-center" reverseOrder={false} toastOptions={{
+         style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
+         success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
+         error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+       }}/>
+
+       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
+             <span>SosmedKu</span>
+             <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
+          </div>
+          <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+             <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => { setActivePage('dashboard'); setSidebarOpen(false); }} />
+             <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => { setActivePage('order'); setSidebarOpen(false); }} />
+             <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => { setActivePage('history'); setSidebarOpen(false); }} />
+             <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => { setActivePage('deposit'); setSidebarOpen(false); }} />
+             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => { setActivePage('ticket'); setSidebarOpen(false); }} />
+
+             {isAdmin && (
+                <div className="pt-4 mt-4 border-t border-slate-700/50">
+                    <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
+                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
+                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
+                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
+                </div>
+             )}
+             <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
+          </nav>
+       </aside>
+
+       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+
+       <main className="flex-1 flex flex-col h-screen overflow-hidden">
+          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
+             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
+             <div className="flex items-center gap-4 ml-auto">
+                <div className="text-right">
+                    <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
+                    <p className="text-xs text-green-400">{formatRupiah(profile?.balance || 0)}</p>
+                </div>
+             </div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
+             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
+             {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
+             {activePage === 'deposit' && <DepositView />}
+             {activePage === 'ticket' && <TicketView userId={session.user.id} />}
+             
+             {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
+             {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
+             {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
+          </div>
+       </main>
+    </div>
+  );
 };
 
 export default App;
