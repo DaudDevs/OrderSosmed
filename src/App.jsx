@@ -255,25 +255,20 @@ const AdminSaldoView = () => {
     setLoading(false);
   };
 
-  // --- FITUR BARU: DELETE USER (YANG SUDAH DIPERBAIKI) ---
+  // --- FITUR BARU: DELETE USER TOTAL (RPC) ---
   const handleDeleteUser = async (userId, username) => {
-      if(!confirm(`⚠️ PERINGATAN KERAS!\n\nAnda akan menghapus user @${username}.\n\nSemua data berikut akan HILANG PERMANEN:\n- Riwayat Saldo\n- Semua Orderan\n- Semua Tiket Chat\n\nLanjutkan?`)) return;
+      if(!confirm(`⚠️ BAHAYA: Hapus user @${username} secara PERMANEN?\n\nAkun Login, Email, Saldo, dan History akan dihapus total.`)) return;
       
-      const toastId = toast.loading("Membersihkan data user...");
+      const toastId = toast.loading("Memusnahkan akun user...");
       try {
-          // 1. Hapus Tiket User dulu
-          const { error: errTicket } = await supabase.from('tickets').delete().eq('user_id', userId);
-          if (errTicket) throw new Error("Gagal hapus tiket: " + errTicket.message);
+          // Panggil fungsi SQL Sakti yang baru kita buat
+          const { error } = await supabase.rpc('delete_user_completely', { 
+              target_user_id: userId 
+          });
 
-          // 2. Hapus Order User dulu
-          const { error: errOrder } = await supabase.from('user_orders').delete().eq('user_id', userId);
-          if (errOrder) throw new Error("Gagal hapus order: " + errOrder.message);
-
-          // 3. Baru Hapus Profil User
-          const { error: errProfile } = await supabase.from('profiles').delete().eq('id', userId);
-          if (errProfile) throw new Error("Gagal hapus profil: " + errProfile.message);
+          if (error) throw error;
           
-          toast.success(`User @${username} berhasil dimusnahkan!`, { id: toastId });
+          toast.success(`User @${username} HILANG SELAMANYA!`, { id: toastId });
           fetchUsers(); // Refresh tabel
       } catch (err) {
           console.error(err);
