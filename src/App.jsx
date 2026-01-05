@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2
+  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info
 } from 'lucide-react';
 
 // ==========================================
@@ -15,9 +15,9 @@ import {
 const IS_LOCAL = import.meta.env.DEV; 
 
 const LOCAL_CREDENTIALS = {
-  api_id: '67423',  
-  api_key: '58c3f8a6c9955837e36f99fc649c43784dd27f5b231f06ea741e898ac3425fd9', 
-  secret_key: '22300223' 
+    api_id: '67423',  
+    api_key: '58c3f8a6c9955837e36f99fc649c43784dd27f5b231f06ea741e898ac3425fd9', 
+    secret_key: '22300223' 
 };
 
 const CONFIG = { PROFIT_PERCENTAGE: 150 }; 
@@ -416,331 +416,341 @@ const DashboardView = ({ profile, onNavigate }) => {
 };
 
 const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
-  const [selectedCatId, setSelectedCatId] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [target, setTarget] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCatId, setSelectedCatId] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [target, setTarget] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const getVal = (item, keys) => {
-    if (!item) return null;
-    for (let key of keys) { if (item[key] !== undefined && item[key] !== null && item[key] !== "") return item[key]; }
-    return null;
-  };
+  const getVal = (item, keys) => {
+    if (!item) return null;
+    for (let key of keys) { if (item[key] !== undefined && item[key] !== null && item[key] !== "") return item[key]; }
+    return null;
+  };
 
-  const validServices = Array.isArray(services) ? services : [];
-  const catIdKeys = ['category_id', 'cat_id', 'group_id'];
-  const catNameKeys = ['category', 'kategori', 'category_name'];
-  const srvIdKeys = ['id', 'service', 'num'];
-  const srvNameKeys = ['name', 'service_name', 'layanan'];
-  const priceKeys = ['price', 'rate', 'harga'];
+  const validServices = Array.isArray(services) ? services : [];
+  const catIdKeys = ['category_id', 'cat_id', 'group_id'];
+  const catNameKeys = ['category', 'kategori', 'category_name'];
+  const srvIdKeys = ['id', 'service', 'num'];
+  const srvNameKeys = ['name', 'service_name', 'layanan'];
+  const priceKeys = ['price', 'rate', 'harga'];
 
-  const searchedServices = validServices.filter(s => {
-      if (!searchTerm) return true; 
-      const term = searchTerm.toLowerCase();
-      const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
-      const cName = (getVal(s, catNameKeys) || '').toLowerCase();
-      const sId = String(getVal(s, srvIdKeys) || '');
-      return sName.includes(term) || cName.includes(term) || sId.includes(term);
-  });
+  const searchedServices = validServices.filter(s => {
+      if (!searchTerm) return true; 
+      const term = searchTerm.toLowerCase();
+      const sName = (getVal(s, srvNameKeys) || '').toLowerCase();
+      const cName = (getVal(s, catNameKeys) || '').toLowerCase();
+      const sId = String(getVal(s, srvIdKeys) || '');
+      return sName.includes(term) || cName.includes(term) || sId.includes(term);
+  });
 
-  const categories = [];
-  const seenCats = new Set();
-  searchedServices.forEach(item => {
-      let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
-      let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
-      if (cId && !seenCats.has(String(cId))) { seenCats.add(String(cId)); categories.push({ id: cId, name: cName }); }
-  });
+  const categories = [];
+  const seenCats = new Set();
+  searchedServices.forEach(item => {
+      let cId = getVal(item, catIdKeys) || getVal(item, catNameKeys);
+      let cName = getVal(item, catNameKeys) || `Kategori ${cId}`;
+      if (cId && !seenCats.has(String(cId))) { seenCats.add(String(cId)); categories.push({ id: cId, name: cName }); }
+  });
 
-  const filteredServices = searchedServices.filter(s => {
-      let sCatId = getVal(s, catIdKeys) || getVal(s, catNameKeys);
-      return selectedCatId ? String(sCatId) === String(selectedCatId) : false;
-  });
+  const filteredServices = searchedServices.filter(s => {
+      let sCatId = getVal(s, catIdKeys) || getVal(s, catNameKeys);
+      return selectedCatId ? String(sCatId) === String(selectedCatId) : false;
+  });
 
-  const currentService = validServices.find(s => String(getVal(s, srvIdKeys)) === String(selectedServiceId));
-  const modalPrice = currentService ? parseFloat(getVal(currentService, priceKeys) || 0) : 0;
-  const sellingPricePer1k = modalPrice + ((modalPrice * CONFIG.PROFIT_PERCENTAGE) / 100);
-  const totalPrice = quantity ? (sellingPricePer1k / 1000) * quantity : 0;
+  const currentService = validServices.find(s => String(getVal(s, srvIdKeys)) === String(selectedServiceId));
+  const modalPrice = currentService ? parseFloat(getVal(currentService, priceKeys) || 0) : 0;
+  const sellingPricePer1k = modalPrice + ((modalPrice * CONFIG.PROFIT_PERCENTAGE) / 100);
+  const totalPrice = quantity ? (sellingPricePer1k / 1000) * quantity : 0;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const toastId = toast.loading("Memproses pesanan...");
-    const result = await onOrder({ 
-        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
-    }, currentService);
-    if (result.success) {
-       toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
-       refreshProfile(); setTarget(''); setQuantity('');
-    } else {
-       toast.error(result.msg || 'Gagal order.', { id: toastId });
-    }
-    setLoading(false);
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    const toastId = toast.loading("Memproses pesanan...");
+    const result = await onOrder({ 
+        service: selectedServiceId, target, quantity, totalPrice, modalPricePer1k: modalPrice 
+    }, currentService);
+    if (result.success) {
+       toast.success(`Sukses! Order ID: ${result.orderId}`, { id: toastId });
+       refreshProfile(); setTarget(''); setQuantity('');
+    } else {
+       toast.error(result.msg || 'Gagal order.', { id: toastId });
+    }
+    setLoading(false);
+  };
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-      <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
-        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-           <div className="relative">
-              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
-              <div className="relative">
-                  <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
-                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
-                  />
-                  <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
-              </div>
-           </div>
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+      <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+           <div className="relative">
+              <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
+              <div className="relative">
+                  <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
+                    onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
+                  />
+                  <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
+              </div>
+           </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <div className="md:col-span-2">
-                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
-                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
-                      <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
-                      {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
-                  </select>
-               </div>
-               <div className="md:col-span-2">
-                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
-                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
-                      <option value="">-- Pilih Layanan --</option>
-                      {filteredServices.map((s, i) => {
-                          const id = getVal(s, srvIdKeys);
-                          const name = getVal(s, srvNameKeys);
-                          const price = parseFloat(getVal(s, priceKeys) || 0);
-                          const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
-                          return <option key={i} value={id}>ID:{id} - {name} - {formatRupiah(sellPrice)}</option>
-                      })}
-                  </select>
-               </div>
-           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="md:col-span-2">
+                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
+                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
+                      <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
+                      {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
+                  </select>
+               </div>
+               <div className="md:col-span-2">
+                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
+                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
+                      <option value="">-- Pilih Layanan --</option>
+                      {filteredServices.map((s, i) => {
+                          const id = getVal(s, srvIdKeys);
+                          const name = getVal(s, srvNameKeys);
+                          const price = parseFloat(getVal(s, priceKeys) || 0);
+                          const sellPrice = price + ((price * CONFIG.PROFIT_PERCENTAGE) / 100);
+                          return <option key={i} value={id}>ID:{id} - {name} - {formatRupiah(sellPrice)}</option>
+                      })}
+                  </select>
+               </div>
+           </div>
 
-           {currentService && (
-             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200 animate-fade-in">
-                <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
-                <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
-                    <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
-                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: {formatRupiah(sellingPricePer1k)} / 1k</span>
-                </div>
-             </div>
-           )}
+           {currentService && (
+             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-sm text-indigo-200 animate-fade-in">
+                <p className="opacity-80 text-xs md:text-sm leading-relaxed">{getVal(currentService, ['note', 'desc', 'keterangan']) || 'Tidak ada deskripsi'}</p>
+                <div className="mt-3 pt-3 border-t border-indigo-500/20 flex flex-wrap gap-2 justify-between items-center text-xs">
+                    <span className="text-slate-400">Min: {getVal(currentService, ['min']) || 1} / Max: {getVal(currentService, ['max']) || 'Unlimited'}</span>
+                    <span className="font-bold text-green-400 bg-green-500/10 px-2 py-1 rounded">Harga: {formatRupiah(sellingPricePer1k)} / 1k</span>
+                </div>
+             </div>
+           )}
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Target</label>
-                 <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Link / Username" value={target} onChange={e => setTarget(e.target.value)} required />
-              </div>
-              <div>
-                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Jumlah</label>
-                 <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
-              </div>
-           </div>
-           
-           <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
-             <div className="text-center md:text-left">
-                <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
-                <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
-             </div>
-             <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
-               {loading ? <Loader2 className="animate-spin mx-auto"/> : 'BELI SEKARANG'}
-             </button>
-           </div>
-        </form>
-      </div>
-      <div className="space-y-6">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
-           <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
-           <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
-              <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
-              <b className="text-white text-xl">{formatRupiah(balance)}</b>
-           </div>
-           {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
-        </div>
-      </div>
-    </div>
-  );
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Target</label>
+                 <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Link / Username" value={target} onChange={e => setTarget(e.target.value)} required />
+              </div>
+              <div>
+                 <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Jumlah</label>
+                 <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+              </div>
+           </div>
+           
+           <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+             <div className="text-center md:text-left">
+                <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
+                <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
+             </div>
+             <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
+               {loading ? <Loader2 className="animate-spin mx-auto"/> : 'BELI SEKARANG'}
+             </button>
+           </div>
+        </form>
+      </div>
+      <div className="space-y-6">
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
+           <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
+           <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
+              <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
+              <b className="text-white text-xl">{formatRupiah(balance)}</b>
+           </div>
+           {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
+           
+           {/* --- FITUR BARU: INFO PENTING DI BAWAH SALDO --- */}
+           <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 animate-fade-in">
+              <h5 className="font-bold text-blue-400 text-sm flex items-center gap-2 mb-2"><Info size={16}/> Harap Dibaca!</h5>
+              <ul className="text-slate-300 text-xs space-y-2 list-disc pl-4">
+                  <li>Pastikan akun target <b>TIDAK DI-PRIVATE</b>.</li>
+                  <li>Jangan ganti username/link saat order diproses.</li>
+                  <li>Satu link hanya boleh 1 order aktif (tunggu status Completed baru order lagi untuk link yang sama).</li>
+                  <li>Kesalahan input target = <b>NO REFUND</b>.</li>
+                  <li>Jika status Error/Partial, saldo otomatis refund.</li>
+              </ul>
+           </div>
+
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
-    const [orders, setOrders] = useState([]);
-    const [loadingId, setLoadingId] = useState(null);
-    const [isBulkChecking, setIsBulkChecking] = useState(false);
+    const [orders, setOrders] = useState([]);
+    const [loadingId, setLoadingId] = useState(null);
+    const [isBulkChecking, setIsBulkChecking] = useState(false);
 
-    const fetchOrders = async () => {
-        const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-        if (data) setOrders(data);
-    };
+    const fetchOrders = async () => {
+        const { data } = await supabase.from('user_orders').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+        if (data) setOrders(data);
+    };
 
-    useEffect(() => { fetchOrders(); }, [userId]);
+    useEffect(() => { fetchOrders(); }, [userId]);
 
-    const handleBulkCheck = async () => {
-        const pendingOrders = orders.filter(o => !['success', 'error', 'partial', 'completed', 'canceled'].includes(String(o.status).toLowerCase()));
-        if (pendingOrders.length === 0) { toast.success("Semua order sudah update!", { icon: '👌' }); return; }
+    const handleBulkCheck = async () => {
+        const pendingOrders = orders.filter(o => !['success', 'error', 'partial', 'completed', 'canceled'].includes(String(o.status).toLowerCase()));
+        if (pendingOrders.length === 0) { toast.success("Semua order sudah update!", { icon: '👌' }); return; }
 
-        setIsBulkChecking(true);
-        const toastId = toast.loading(`Mengecek ${pendingOrders.length} transaksi...`);
-        let updatedCount = 0;
-        for (const order of pendingOrders) {
-            const success = await onCheckStatus(order, null, true);
-            if (success) updatedCount++;
-        }
-        setIsBulkChecking(false);
-        toast.success(`${updatedCount} Data berhasil diperbarui!`, { id: toastId });
-        fetchOrders();
-    };
+        setIsBulkChecking(true);
+        const toastId = toast.loading(`Mengecek ${pendingOrders.length} transaksi...`);
+        let updatedCount = 0;
+        for (const order of pendingOrders) {
+            const success = await onCheckStatus(order, null, true);
+            if (success) updatedCount++;
+        }
+        setIsBulkChecking(false);
+        toast.success(`${updatedCount} Data berhasil diperbarui!`, { id: toastId });
+        fetchOrders();
+    };
 
-    const handleAction = async (action, order) => {
-        if (loadingId) return; setLoadingId(order.id);
-        const toastId = toast.loading("Memproses...");
-        try {
-            if (action === 'status') await onCheckStatus(order, toastId, false);
-            if (action === 'refill') await onRefill(order, toastId);
-        } catch (error) { toast.error("Error", { id: toastId }); }
-        setLoadingId(null); fetchOrders();
-    };
+    const handleAction = async (action, order) => {
+        if (loadingId) return; setLoadingId(order.id);
+        const toastId = toast.loading("Memproses...");
+        try {
+            if (action === 'status') await onCheckStatus(order, toastId, false);
+            if (action === 'refill') await onRefill(order, toastId);
+        } catch (error) { toast.error("Error", { id: toastId }); }
+        setLoadingId(null); fetchOrders();
+    };
 
-    const getStatusBadge = (status) => {
-        const s = String(status).toLowerCase();
-        if (s.includes('success') || s.includes('complet')) return 'bg-green-500/20 text-green-400 border-green-500/30';
-        if (s.includes('pending') || s.includes('process')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-        if (s.includes('error') || s.includes('cancel')) return 'bg-red-500/20 text-red-400 border-red-500/30';
-        if (s.includes('partial')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-        return 'bg-slate-700 text-slate-300 border-slate-600';
-    };
+    const getStatusBadge = (status) => {
+        const s = String(status).toLowerCase();
+        if (s.includes('success') || s.includes('complet')) return 'bg-green-500/20 text-green-400 border-green-500/30';
+        if (s.includes('pending') || s.includes('process')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        if (s.includes('error') || s.includes('cancel')) return 'bg-red-500/20 text-red-400 border-red-500/30';
+        if (s.includes('partial')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'bg-slate-700 text-slate-300 border-slate-600';
+    };
 
-    return (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-500 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
-                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
-                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
-                    <tbody className="divide-y divide-slate-700/50">
-                        {orders.map(o => (
-                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
-                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-slate-700/50 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-500 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
-                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-500">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
-                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
-                                <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getStatusBadge(o.status)}`}>{o.status}</span></td>
-                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
+    return (
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
+            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-500 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
+                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
+                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                        {orders.map(o => (
+                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
+                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-slate-700/50 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-500 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
+                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-500">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
+                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
+                                <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getStatusBadge(o.status)}`}>{o.status}</span></td>
+                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 };
 
 const DepositView = () => (
-    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 text-center shadow-xl">
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-                <CreditCard className="text-indigo-400"/> Deposit QRIS
-            </h3>
-            <p className="text-slate-400 text-sm mb-6">Otomatis dicek Admin. Bebas biaya admin.</p>
-            
-            <div className="bg-white p-4 rounded-2xl inline-block shadow-lg shadow-indigo-500/20 mb-6 relative group transform hover:scale-105 transition-all duration-300">
-                <div className="absolute inset-0 border-2 border-dashed border-slate-300 rounded-2xl m-2 pointer-events-none"></div>
-                <img src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" alt="QRIS Code" className="w-48 h-48 md:w-56 md:h-56 object-contain mx-auto"/>
-                <p className="text-slate-900 font-bold mt-2 text-xs tracking-[0.2em]">SCAN ME</p>
-            </div>
+    <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 text-center shadow-xl">
+            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                <CreditCard className="text-indigo-400"/> Deposit QRIS
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">Otomatis dicek Admin. Bebas biaya admin.</p>
+            
+            <div className="bg-white p-4 rounded-2xl inline-block shadow-lg shadow-indigo-500/20 mb-6 relative group transform hover:scale-105 transition-all duration-300">
+                <div className="absolute inset-0 border-2 border-dashed border-slate-300 rounded-2xl m-2 pointer-events-none"></div>
+                <img src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" alt="QRIS Code" className="w-48 h-48 md:w-56 md:h-56 object-contain mx-auto"/>
+                <p className="text-slate-900 font-bold mt-2 text-xs tracking-[0.2em]">SCAN ME</p>
+            </div>
 
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-left text-sm space-y-3 mb-6">
-                <p className="text-slate-400 text-center text-xs mb-2 uppercase font-bold tracking-wider">Cara Deposit</p>
-                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">1</div><p className="text-slate-300 text-xs">Screenshot kode QR di atas.</p></div>
-                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">2</div><p className="text-slate-300 text-xs">Buka E-Wallet (DANA/Gopay) atau M-Banking.</p></div>
-                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">3</div><p className="text-slate-300 text-xs">Scan & Bayar. Min deposit <b>Rp 1.000</b>.</p></div>
-            </div>
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-left text-sm space-y-3 mb-6">
+                <p className="text-slate-400 text-center text-xs mb-2 uppercase font-bold tracking-wider">Cara Deposit</p>
+                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">1</div><p className="text-slate-300 text-xs">Screenshot kode QR di atas.</p></div>
+                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">2</div><p className="text-slate-300 text-xs">Buka E-Wallet (DANA/Gopay) atau M-Banking.</p></div>
+                <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">3</div><p className="text-slate-300 text-xs">Scan & Bayar. Min deposit <b>Rp 1.000</b>.</p></div>
+            </div>
 
-            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
-                <MessageSquare size={18}/> Konfirmasi WhatsApp
-            </button>
-        </div>
-    </div>
+            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
+                <MessageSquare size={18}/> Konfirmasi WhatsApp
+            </button>
+        </div>
+    </div>
 );
 
 const LoginPage = () => {
-    const [isRegister, setIsRegister] = useState(false);
-    const [formData, setFormData] = useState({ email: '', password: '', username: '', fullname: '' });
-    const [loading, setLoading] = useState(false);
-    const [verificationSent, setVerificationSent] = useState(null);
+    const [isRegister, setIsRegister] = useState(false);
+    const [formData, setFormData] = useState({ email: '', password: '', username: '', fullname: '' });
+    const [loading, setLoading] = useState(false);
+    const [verificationSent, setVerificationSent] = useState(null);
 
-    const handleAuth = async (e) => {
-        e.preventDefault(); setLoading(true);
-        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Sedang Masuk...");
-        
-        try {
-            if (isRegister) {
-                const { data: authData, error: authError } = await supabase.auth.signUp({ 
-                    email: formData.email, password: formData.password,
-                    options: { emailRedirectTo: window.location.origin }
-                });
-                if (authError) throw authError;
-                if (authData.user) {
-                    await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
-                    toast.success("Sukses! Cek Email Anda.", { id: toastId });
-                    setVerificationSent(formData.email);
-                    setIsRegister(false);
-                }
-            } else {
-                const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
-                if (error) {
-                    if (error.message.includes("Email not confirmed")) {
-                        toast.error("Email belum diverifikasi! Cek inbox/spam.", { id: toastId });
-                        setVerificationSent(formData.email);
-                    } else { throw error; }
-                } else {
-                    toast.success("Berhasil Login!", { id: toastId });
-                }
-            }
-        } catch (error) { 
-            toast.error(error.message, { id: toastId });
-        } finally { setLoading(false); }
-    };
+    const handleAuth = async (e) => {
+        e.preventDefault(); setLoading(true);
+        const toastId = toast.loading(isRegister ? "Mendaftarkan..." : "Sedang Masuk...");
+        
+        try {
+            if (isRegister) {
+                const { data: authData, error: authError } = await supabase.auth.signUp({ 
+                    email: formData.email, password: formData.password,
+                    options: { emailRedirectTo: window.location.origin }
+                });
+                if (authError) throw authError;
+                if (authData.user) {
+                    await supabase.from('profiles').insert([{ id: authData.user.id, username: formData.username, full_name: formData.fullname, balance: 0 }]);
+                    toast.success("Sukses! Cek Email Anda.", { id: toastId });
+                    setVerificationSent(formData.email);
+                    setIsRegister(false);
+                }
+            } else {
+                const { error } = await supabase.auth.signInWithPassword({ email: formData.email, password: formData.password });
+                if (error) {
+                    if (error.message.includes("Email not confirmed")) {
+                        toast.error("Email belum diverifikasi! Cek inbox/spam.", { id: toastId });
+                        setVerificationSent(formData.email);
+                    } else { throw error; }
+                } else {
+                    toast.success("Berhasil Login!", { id: toastId });
+                }
+            }
+        } catch (error) { 
+            toast.error(error.message, { id: toastId });
+        } finally { setLoading(false); }
+    };
 
-    return (
-        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-            <div className="w-full max-w-sm bg-[#1e293b] border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-1">SosmedKu</h1>
-                    <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
-                </div>
-                <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
-                
-                {verificationSent && !isRegister && (
-                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex gap-3 items-start animate-fade-in">
-                        <div className="p-1 bg-green-500 rounded-full text-white mt-0.5 shadow-lg shadow-green-500/30 flex-shrink-0"><Mail size={14} /></div>
-                        <div>
-                            <h4 className="text-green-400 font-bold text-sm mb-1">Cek Email Kamu!</h4>
-                            <p className="text-slate-400 text-xs leading-relaxed">
-                                Link verifikasi telah dikirim ke <b className="text-white">{verificationSent}</b>. 
-                                <br/><br/>Silakan cek <b>Inbox</b> atau <b>Spam</b> folder, lalu klik tombol verifikasi untuk Login.
-                            </p>
-                        </div>
-                    </div>
-                )}
+    return (
+        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-[#1e293b] border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl">
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold text-white mb-1">SosmedKu</h1>
+                    <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
+                </div>
+                <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
+                
+                {verificationSent && !isRegister && (
+                    <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex gap-3 items-start animate-fade-in">
+                        <div className="p-1 bg-green-500 rounded-full text-white mt-0.5 shadow-lg shadow-green-500/30 flex-shrink-0"><Mail size={14} /></div>
+                        <div>
+                            <h4 className="text-green-400 font-bold text-sm mb-1">Cek Email Kamu!</h4>
+                            <p className="text-slate-400 text-xs leading-relaxed">
+                                Link verifikasi telah dikirim ke <b className="text-white">{verificationSent}</b>. 
+                                <br/><br/>Silakan cek <b>Inbox</b> atau <b>Spam</b> folder, lalu klik tombol verifikasi untuk Login.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
-                <form onSubmit={handleAuth} className="space-y-4">
-                    {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
-                    <input type="email" placeholder="Email" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
-                    <input type="password" placeholder="Password Minimal 8 Huruf/Angka" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, password: e.target.value})} required />
-                    <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : (isRegister ? 'Daftar Sekarang' : 'Masuk Dashboard')}</button>
-                </form>
-                <button onClick={() => setIsRegister(!isRegister)} className="block w-full text-center text-slate-400 mt-6 text-sm hover:text-white transition-colors">{isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}</button>
-            </div>
-        </div>
-    );
+                <form onSubmit={handleAuth} className="space-y-4">
+                    {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
+                    <input type="email" placeholder="Email" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
+                    <input type="password" placeholder="Password Minimal 8 Huruf/Angka" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, password: e.target.value})} required />
+                    <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : (isRegister ? 'Daftar Sekarang' : 'Masuk Dashboard')}</button>
+                </form>
+                <button onClick={() => setIsRegister(!isRegister)} className="block w-full text-center text-slate-400 mt-6 text-sm hover:text-white transition-colors">{isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}</button>
+            </div>
+        </div>
+    );
 };
 
-// ==========================================
-// 5. MAIN APP LAYOUT (RESPONSIVE)
-// ==========================================
 // ==========================================
 // 5. MAIN APP LAYOUT (RESPONSIVE)
 // ==========================================
