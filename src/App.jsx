@@ -761,50 +761,75 @@ const App = () => {
           const pId = order.provider_id;
           if (!pId || pId === 'undefined' || pId === 'null') {
               console.warn(`[Status] Order ID ${order.id} tidak punya Provider ID.`);
-              if (!silent) toast.error(`Gagal: Order #${order.id} tidak terdaftar di Pusat (Provider ID Kosong)`, { id: toastId });
               return false;
           }
 
-          console.log(`[Status] Mengecek Order Provider ID: ${pId}...`);
           const res = await callApi('status', { id: pId, action: 'status' });
-          console.log("[Status] Respon Pusat:", res.data);
-
+          
           if (res.data.status === true || res.data.response === true) {
-              const newData = res.data.data;
+              const newData = res.data.data; // { status, start_count, remains }
               
-              if (!newData) {
-                  throw new Error("Data kosong dari pusat");
+              // --- LOGIKA AUTO REFUND ---
+              const statusLower = String(newData.status).toLowerCase();
+              let newStatus = newData.status;
+              let refundAmount = 0;
+
+              // Cek apakah status GAGAL / PARTIAL
+              if (['error', 'canceled', 'partial'].includes(statusLower) && order.status !== 'Refunded') {
+                  
+                  // Hitung Refund
+                  const pricePerItem = order.price / order.quantity;
+                  let itemsFailed = 0;
+
+                  if (statusLower === 'partial') {
+                      itemsFailed = parseInt(newData.remains) || 0; // Sisa yang tidak masuk
+                  } else {
+                      itemsFailed = order.quantity; // Semua gagal
+                  }
+
+                  refundAmount = Math.floor(itemsFailed * pricePerItem);
+
+                  if (refundAmount > 0) {
+                      // 1. Kembalikan Saldo User
+                      const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
+                      const currentBalance = userData?.balance || 0;
+                      await supabase.from('profiles').update({ balance: currentBalance + refundAmount }).eq('id', order.user_id);
+                      
+                      // 2. Tandai status jadi Refunded
+                      newStatus = `Refunded (${formatRupiah(refundAmount)})`;
+                      if (!silent) toast.success(`Auto Refund: ${formatRupiah(refundAmount)}`, { id: toastId });
+                  }
               }
 
-              const { error } = await supabase.from('user_orders').update({ 
-                  status: newData.status, 
+              // Update Order di Database
+              await supabase.from('user_orders').update({ 
+                  status: newStatus, 
                   start_count: newData.start_count, 
                   remains: newData.remains 
               }).eq('id', order.id);
 
-              if (error) throw error;
-
-              if (!silent) {
-                  toast.success(`Status: ${newData.status}`, { id: toastId });
-              }
+              if (!silent && !refundAmount) toast.success(`Status: ${newData.status}`, { id: toastId });
               return true; 
           } else {
-              const errorMsg = res.data.data?.msg || "Gagal dari pusat";
-              console.error(`[Status] Gagal: ${errorMsg}`);
-              
-              if (!silent) {
-                  if (String(errorMsg).toLowerCase().includes('not found')) {
-                      await supabase.from('user_orders').update({ status: 'Error (Not Found)' }).eq('id', order.id);
-                      toast.error("Order tidak ditemukan di pusat (Status diubah ke Error)", { id: toastId });
-                  } else {
-                      toast.error(`Pusat: ${errorMsg}`, { id: toastId });
-                  }
+              // Jika order hilang di pusat (Error Not Found), anggap Canceled & Refund Full
+              const errorMsg = res.data.data?.msg || "";
+              if (String(errorMsg).toLowerCase().includes('not found') && order.status !== 'Refunded') {
+                  
+                  // Refund Full
+                  const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
+                  const refund = order.price;
+                  
+                  await supabase.from('profiles').update({ balance: (userData?.balance || 0) + refund }).eq('id', order.user_id);
+                  await supabase.from('user_orders').update({ status: `Refunded (Not Found)` }).eq('id', order.id);
+                  
+                  if (!silent) toast.error(`Order Hilang -> Auto Refund ${formatRupiah(refund)}`, { id: toastId });
+                  return true;
               }
               return false;
           }
       } catch (err) { 
-          console.error("[Status] System Error:", err);
-          if(!silent && toastId) toast.error("Koneksi Error (Cek Console)", { id: toastId });
+          console.error(err);
+          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId });
           return false;
       }
   };
