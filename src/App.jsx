@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail
+  MessageSquare, User, Search, Mail, ListOrdered
 } from 'lucide-react';
 
 // ==========================================
@@ -71,7 +71,8 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
 // 3. PAGE COMPONENTS
 // ==========================================
 
-const AdminView = () => {
+// --- HALAMAN ADMIN: ISI SALDO ---
+const AdminSaldoView = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -132,6 +133,93 @@ const AdminView = () => {
       </div>
     </div>
   );
+};
+
+// --- HALAMAN ADMIN: MONITORING ORDER (BARU) ---
+const AdminOrderView = ({ onCheckStatus }) => {
+    const [orders, setOrders] = useState([]);
+    const [search, setSearch] = useState('');
+    const [loadingId, setLoadingId] = useState(null);
+
+    useEffect(() => { fetchAllOrders(); }, []);
+
+    const fetchAllOrders = async () => {
+        // Ambil semua order, join dengan tabel profiles untuk dapat username
+        const { data, error } = await supabase
+            .from('user_orders')
+            .select('*, profiles(username)')
+            .order('created_at', { ascending: false })
+            .limit(50); // Ambil 50 order terakhir biar ringan
+        
+        if (data) setOrders(data);
+    };
+
+    const handleAction = async (action, order) => {
+        if (loadingId) return; setLoadingId(order.id);
+        const toastId = toast.loading("Cek Status...");
+        try {
+            await onCheckStatus(order, toastId); // Gunakan fungsi cek status global
+            fetchAllOrders(); // Refresh table
+        } catch (error) { toast.error("Gagal", { id: toastId }); }
+        setLoadingId(null);
+    };
+
+    const filteredOrders = orders.filter(o => 
+        String(o.provider_id).includes(search) || 
+        String(o.target).toLowerCase().includes(search.toLowerCase()) ||
+        String(o.profiles?.username).toLowerCase().includes(search.toLowerCase())
+    );
+
+    return (
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
+            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+                <h3 className="font-bold text-white text-lg flex items-center gap-2"><ListOrdered className="text-purple-400"/> Monitoring Order</h3>
+                <div className="relative w-full md:w-64">
+                    <input type="text" placeholder="Cari ID / User / Target..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-purple-500 outline-none" value={search} onChange={e => setSearch(e.target.value)} />
+                    <Search className="absolute left-3 top-2.5 text-slate-500 w-4 h-4" />
+                </div>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-slate-300 min-w-[800px]">
+                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px]">
+                        <tr>
+                            <th className="px-4 py-3">ID / User</th>
+                            <th className="px-4 py-3">Layanan</th>
+                            <th className="px-4 py-3">Target</th>
+                            <th className="px-4 py-3">Harga/Modal</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3 text-center">Cek</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                        {filteredOrders.map(o => (
+                            <tr key={o.id} className="hover:bg-slate-800/30">
+                                <td className="px-4 py-3">
+                                    <div className="font-bold text-white">#{o.provider_id}</div>
+                                    <div className="text-[10px] text-purple-400">@{o.profiles?.username || 'Unknown'}</div>
+                                    <div className="text-[10px] text-slate-500">{new Date(o.created_at).toLocaleDateString()}</div>
+                                </td>
+                                <td className="px-4 py-3 text-xs max-w-[200px] truncate">{o.service_name}</td>
+                                <td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td>
+                                <td className="px-4 py-3">
+                                    <div className="text-green-400 font-bold">{formatRupiah(o.price)}</div>
+                                    <div className="text-[10px] text-slate-500">Modal: {formatRupiah(o.modal)}</div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : String(o.status).toLowerCase().includes('pending') ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">
+                                        {loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
 };
 
 const DashboardView = ({ profile, onNavigate }) => {
@@ -342,7 +430,7 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
     };
 
     return (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
             <div className="p-5 md:p-6 border-b border-slate-700/50 flex justify-between items-center">
                 <h3 className="font-bold text-white text-lg">Riwayat Pesanan</h3>
                 <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded-lg">{orders.length} Transaksi</span>
@@ -418,7 +506,6 @@ const LoginPage = () => {
     const [isRegister, setIsRegister] = useState(false);
     const [formData, setFormData] = useState({ email: '', password: '', username: '', fullname: '' });
     const [loading, setLoading] = useState(false);
-    // STATE UNTUK BANNER SUKSES
     const [verificationSent, setVerificationSent] = useState(null);
 
     const handleAuth = async (e) => {
@@ -444,9 +531,7 @@ const LoginPage = () => {
                     if (error.message.includes("Email not confirmed")) {
                         toast.error("Email belum diverifikasi! Cek inbox/spam.", { id: toastId });
                         setVerificationSent(formData.email);
-                    } else {
-                        throw error;
-                    }
+                    } else { throw error; }
                 } else {
                     toast.success("Berhasil Login!", { id: toastId });
                 }
@@ -465,7 +550,6 @@ const LoginPage = () => {
                 </div>
                 <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
                 
-                {/* --- BANNER CEK EMAIL (BARU) --- */}
                 {verificationSent && !isRegister && (
                     <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex gap-3 items-start animate-fade-in">
                         <div className="p-1 bg-green-500 rounded-full text-white mt-0.5 shadow-lg shadow-green-500/30 flex-shrink-0"><Mail size={14} /></div>
@@ -571,14 +655,12 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
-       {/* 2. KOMPONEN TOAST (WAJIB ADA) */}
        <Toaster position="top-center" reverseOrder={false} toastOptions={{
          style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
          success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
          error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
        }}/>
 
-       {/* MOBILE SIDEBAR OVERLAY */}
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
              <span>SosmedKu</span>
@@ -592,14 +674,15 @@ const App = () => {
              {isAdmin && (
                 <div className="pt-4 mt-4 border-t border-slate-700/50">
                     <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
-                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin'} onClick={() => { setActivePage('admin'); setSidebarOpen(false); }} />
+                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
+                    {/* MENU BARU UNTUK MONITORING ORDER */}
+                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
                 </div>
              )}
              <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
           </nav>
        </aside>
 
-       {/* BACKDROP UNTUK MOBILE */}
        {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
 
        <main className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -618,7 +701,10 @@ const App = () => {
              {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
              {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
              {activePage === 'deposit' && <DepositView />}
-             {activePage === 'admin' && isAdmin && <AdminView />}
+             
+             {/* HALAMAN ADMIN */}
+             {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
+             {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
           </div>
        </main>
     </div>
