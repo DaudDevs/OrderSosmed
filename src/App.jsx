@@ -626,14 +626,41 @@ const App = () => {
      } catch (e) { return { success: false, msg: 'Koneksi error' }; }
   };
 
-  const handleCheckStatus = async (order, toastId) => {
+ // MODIFIKASI: Tambahkan parameter 'silent' agar tidak berisik saat cek massal
+  const handleCheckStatus = async (order, toastId = null, silent = false) => {
       try {
+          // Panggil API Status
           const res = await callApi('status', { id: order.provider_id || order.id, action: 'status' });
+          
+          // Cek apakah respon valid
           if (res.data.status === true || res.data.response === true) {
-              await supabase.from('user_orders').update({ status: res.data.data.status, start_count: res.data.data.start_count, remains: res.data.data.remains }).eq('id', order.id);
-              toast.success(`Status: ${res.data.data.status}`, { id: toastId });
-          } else { toast.error("Gagal cek status", { id: toastId }); }
-      } catch (err) { toast.error("Koneksi Error", { id: toastId }); }
+              const newData = res.data.data; // Data dari pusat (status, start_count, remains)
+              
+              // Update ke Supabase
+              const { error } = await supabase.from('user_orders').update({ 
+                  status: newData.status, 
+                  start_count: newData.start_count, 
+                  remains: newData.remains 
+              }).eq('id', order.id);
+
+              if (error) throw error;
+
+              // Notifikasi (Hanya jika tidak silent)
+              if (!silent) {
+                  const msg = `Status: ${newData.status} | Sisa: ${newData.remains}`;
+                  if(toastId) toast.success(msg, { id: toastId });
+                  else toast.success(msg);
+              }
+              return true; // Berhasil update
+          } else { 
+              if(!silent && toastId) toast.error("Gagal cek status", { id: toastId });
+              return false;
+          }
+      } catch (err) { 
+          console.error(err);
+          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId });
+          return false;
+      }
   };
 
   const handleRefill = async (order, toastId) => {
