@@ -15,9 +15,9 @@ import {
 const IS_LOCAL = import.meta.env.DEV; 
 
 const LOCAL_CREDENTIALS = {
-  api_id: '57788',  
-  api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b', 
-  secret_key: 'daudhanafi' 
+  api_id: '67423',  
+  api_key: '58c3f8a6c9955837e36f99fc649c43784dd27f5b231f06ea741e898ac3425fd9', 
+  secret_key: '22300223' 
 };
 
 const CONFIG = { PROFIT_PERCENTAGE: 150 }; 
