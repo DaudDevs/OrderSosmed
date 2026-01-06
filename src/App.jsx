@@ -72,10 +72,17 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
 // ==========================================
 
 // --- USER: TIKET BANTUAN ---
+// --- USER: TIKET BANTUAN (VERSI CHAT) ---
 const TicketView = ({ userId }) => {
     const [tickets, setTickets] = useState([]);
+    const [selectedTicket, setSelectedTicket] = useState(null);
+    const [replies, setReplies] = useState([]);
+    const [newReply, setNewReply] = useState('');
+    
+    // Form Baru
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => { fetchTickets(); }, [userId]);
@@ -85,65 +92,144 @@ const TicketView = ({ userId }) => {
         if (data) setTickets(data);
     };
 
-    const handleSubmit = async (e) => {
+    const fetchReplies = async (ticketId) => {
+        const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
+        if (data) setReplies(data);
+    };
+
+    const handleSelectTicket = (ticket) => {
+        setSelectedTicket(ticket);
+        fetchReplies(ticket.id);
+        setIsCreating(false);
+    };
+
+    const handleCreateTicket = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const toastId = toast.loading("Mengirim tiket...");
+        const toastId = toast.loading("Membuat tiket...");
         try {
-            const { error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message }]);
+            const { error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message, status: 'Open' }]);
             if (error) throw error;
-            toast.success("Tiket terkirim! Tunggu balasan Admin.", { id: toastId });
-            setSubject(''); setMessage(''); fetchTickets();
-        } catch (err) { toast.error("Gagal kirim tiket", { id: toastId }); }
+            toast.success("Tiket dibuat!", { id: toastId });
+            setSubject(''); setMessage(''); setIsCreating(false); fetchTickets();
+        } catch (err) { toast.error("Gagal", { id: toastId }); }
         setLoading(false);
     };
 
+    const handleSendReply = async (e) => {
+        e.preventDefault();
+        if (!newReply.trim()) return;
+        
+        // Kirim Balasan
+        await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]);
+        
+        // Update Status jadi Open lagi (agar admin tau ada balasan baru)
+        await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id);
+        
+        setNewReply('');
+        fetchReplies(selectedTicket.id); // Refresh chat
+    };
+
+    const handleCloseTicket = async () => {
+        if(!confirm("Yakin ingin menutup tiket ini? Anda tidak bisa membalas lagi.")) return;
+        await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id);
+        toast.success("Tiket Ditutup");
+        fetchTickets();
+        setSelectedTicket(null);
+    };
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
-            {/* Form Buat Tiket */}
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
-                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><LifeBuoy className="text-orange-400"/> Buat Tiket Baru</h3>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input type="text" placeholder="Subjek (Misal: Order Pending Lama)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={subject} onChange={e => setSubject(e.target.value)} required />
-                    <textarea placeholder="Jelaskan masalahmu secara detail..." rows="4" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={message} onChange={e => setMessage(e.target.value)} required></textarea>
-                    <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
-                        {loading ? <Loader2 className="animate-spin"/> : <><Send size={16}/> Kirim Tiket</>}
-                    </button>
-                </form>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[500px]">
+            {/* Sidebar List Tiket */}
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto">
+                <button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button>
+                <div className="space-y-2">
+                    {tickets.map(t => (
+                        <div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}>
+                            <div className="flex justify-between mb-1">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span>
+                                <span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-white text-sm font-bold truncate">{t.subject}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            {/* List Tiket */}
-            <div className="space-y-4">
-                <h3 className="font-bold text-white mb-2">Riwayat Tiket</h3>
-                {tickets.length === 0 && <p className="text-slate-500 text-sm">Belum ada tiket.</p>}
-                {tickets.map(t => (
-                    <div key={t.id} className="bg-[#1e293b] border border-slate-700 rounded-xl p-5 shadow-lg">
-                        <div className="flex justify-between items-start mb-3">
-                            <h4 className="font-bold text-white text-sm">{t.subject}</h4>
-                            <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>{t.status}</span>
-                        </div>
-                        <p className="text-slate-300 text-xs bg-slate-800/50 p-3 rounded-lg mb-3">"{t.message}"</p>
-                        {t.admin_reply ? (
-                            <div className="bg-indigo-500/10 border-l-4 border-indigo-500 p-3 rounded-r-lg">
-                                <p className="text-[10px] text-indigo-300 font-bold mb-1">Balasan Admin:</p>
-                                <p className="text-slate-200 text-xs">{t.admin_reply}</p>
-                            </div>
-                        ) : (
-                            <p className="text-[10px] text-slate-500 italic">Menunggu balasan admin...</p>
-                        )}
-                        <p className="text-[10px] text-slate-600 mt-2 text-right">{new Date(t.created_at).toLocaleString()}</p>
+            {/* Main Content (Form / Chat) */}
+            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
+                {isCreating ? (
+                    <div className="p-6">
+                        <h3 className="font-bold text-white mb-4">Tulis Keluhan</h3>
+                        <form onSubmit={handleCreateTicket} className="space-y-4">
+                            <input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required />
+                            <textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea>
+                            <button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button>
+                        </form>
                     </div>
-                ))}
+                ) : selectedTicket ? (
+                    <>
+                        {/* Header Chat */}
+                        <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4>
+                                <p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p>
+                            </div>
+                            {selectedTicket.status !== 'Closed' && (
+                                <button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>
+                            )}
+                        </div>
+
+                        {/* Isi Chat */}
+                        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]">
+                            {/* Pesan Awal */}
+                            <div className="flex justify-end">
+                                <div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm">
+                                    <p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>
+                                    {selectedTicket.message}
+                                </div>
+                            </div>
+                            
+                            {/* Balasan-balasan */}
+                            {replies.map(r => (
+                                <div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}>
+                                        <p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p>
+                                        {r.message}
+                                        <p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Input Chat */}
+                        {selectedTicket.status !== 'Closed' ? (
+                            <form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2">
+                                <input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} />
+                                <button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button>
+                            </form>
+                        ) : (
+                            <div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+                        <MessageSquare size={40} className="mb-2 opacity-20"/>
+                        <p className="text-sm">Pilih tiket untuk melihat percakapan</p>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
 // --- ADMIN: KELOLA TIKET ---
+// --- ADMIN: KELOLA TIKET (VERSI CHAT) ---
 const AdminTicketView = () => {
     const [tickets, setTickets] = useState([]);
-    const [replyMsg, setReplyMsg] = useState('');
-    const [selectedId, setSelectedId] = useState(null);
+    const [selectedTicket, setSelectedTicket] = useState(null);
+    const [replies, setReplies] = useState([]);
+    const [newReply, setNewReply] = useState('');
 
     useEffect(() => { fetchTickets(); }, []);
 
@@ -152,70 +238,107 @@ const AdminTicketView = () => {
         if (data) setTickets(data);
     };
 
-    const handleReply = async (id) => {
-        if (!replyMsg) return toast.error("Balasan tidak boleh kosong");
-        const toastId = toast.loading("Mengirim balasan...");
-        
-        const { error } = await supabase.from('tickets').update({ 
-            admin_reply: replyMsg, 
-            status: 'Replied' 
-        }).eq('id', id);
+    const fetchReplies = async (ticketId) => {
+        const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
+        if (data) setReplies(data);
+    };
 
-        if (!error) {
-            toast.success("Berhasil dibalas!", { id: toastId });
-            setReplyMsg(''); setSelectedId(null); fetchTickets();
-        } else {
-            toast.error("Gagal membalas", { id: toastId });
-        }
+    const handleSelectTicket = (ticket) => {
+        setSelectedTicket(ticket);
+        fetchReplies(ticket.id);
+    };
+
+    const handleSendReply = async (e) => {
+        e.preventDefault();
+        if (!newReply.trim()) return;
+
+        // Kirim sebagai Admin
+        await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'admin', message: newReply }]);
+        
+        // Update status jadi Replied
+        await supabase.from('tickets').update({ status: 'Replied' }).eq('id', selectedTicket.id);
+        
+        setNewReply('');
+        fetchReplies(selectedTicket.id);
+        fetchTickets(); // Refresh list agar status terupdate
+    };
+
+    const handleCloseTicket = async () => {
+        if(!confirm("Tutup tiket ini?")) return;
+        await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id);
+        toast.success("Tiket Ditutup");
+        fetchTickets();
+        setSelectedTicket(null);
     };
 
     return (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-6 border-b border-slate-700/50">
-                <h3 className="font-bold text-white text-lg flex items-center gap-2"><MessageSquare className="text-indigo-400"/> Kelola Tiket User</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[600px]">
+            {/* List Tiket */}
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto">
+                <h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3>
+                <div className="space-y-2">
+                    {tickets.map(t => (
+                        <div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span>
+                            </div>
+                            <p className="text-white text-sm font-bold truncate">{t.subject}</p>
+                            <p className="text-slate-500 text-[10px] truncate">{t.message}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-300">
-                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px]">
-                        <tr>
-                            <th className="px-6 py-3">User / Tanggal</th>
-                            <th className="px-6 py-3">Pesan</th>
-                            <th className="px-6 py-3">Status</th>
-                            <th className="px-6 py-3">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/50">
-                        {tickets.map(t => (
-                            <tr key={t.id} className="hover:bg-slate-800/30">
-                                <td className="px-6 py-4">
-                                    <div className="font-bold text-white">@{t.profiles?.username || 'User'}</div>
-                                    <div className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</div>
-                                </td>
-                                <td className="px-6 py-4 max-w-xs">
-                                    <div className="text-xs font-bold text-indigo-300 mb-1">{t.subject}</div>
-                                    <div className="text-xs text-slate-400 mb-2">"{t.message}"</div>
-                                    {t.admin_reply && <div className="text-[10px] text-green-400 bg-green-500/10 p-2 rounded">✅: {t.admin_reply}</div>}
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${t.status === 'Open' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'}`}>{t.status}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    {selectedId === t.id ? (
-                                        <div className="flex flex-col gap-2">
-                                            <input autoFocus type="text" className="bg-[#0f172a] border border-slate-600 rounded px-2 py-1 text-xs text-white" placeholder="Ketik balasan..." value={replyMsg} onChange={e => setReplyMsg(e.target.value)} />
-                                            <div className="flex gap-2">
-                                                <button onClick={() => handleReply(t.id)} className="bg-green-600 text-white px-2 py-1 rounded text-xs">Kirim</button>
-                                                <button onClick={() => setSelectedId(null)} className="bg-slate-600 text-white px-2 py-1 rounded text-xs">Batal</button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <button onClick={() => { setSelectedId(t.id); setReplyMsg(t.admin_reply || ''); }} className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-xs">Balas</button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+
+            {/* Chat Room */}
+            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
+                {selectedTicket ? (
+                    <>
+                        <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4>
+                            </div>
+                            {selectedTicket.status !== 'Closed' && (
+                                <button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>
+                            )}
+                        </div>
+
+                        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]">
+                            {/* Pesan Awal User */}
+                            <div className="flex justify-start">
+                                <div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm">
+                                    <p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>
+                                    {selectedTicket.message}
+                                </div>
+                            </div>
+
+                            {/* Replies */}
+                            {replies.map(r => (
+                                <div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}>
+                                        <p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p>
+                                        {r.message}
+                                        <p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {selectedTicket.status !== 'Closed' ? (
+                            <form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2">
+                                <input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} />
+                                <button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button>
+                            </form>
+                        ) : (
+                            <div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
+                        <MessageSquare size={40} className="mb-2 opacity-20"/>
+                        <p className="text-sm">Pilih tiket untuk membalas</p>
+                    </div>
+                )}
             </div>
         </div>
     );
