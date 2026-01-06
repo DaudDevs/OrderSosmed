@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info
+  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info, MessageCircle, Twitter
 } from 'lucide-react';
 
 // ==========================================
@@ -15,9 +15,9 @@ import {
 const IS_LOCAL = import.meta.env.DEV; 
 
 const LOCAL_CREDENTIALS = {
-    api_id: '67423',  
-    api_key: '58c3f8a6c9955837e36f99fc649c43784dd27f5b231f06ea741e898ac3425fd9', 
-    secret_key: '22300223' 
+  api_id: '67423',  
+  api_key: '58c3f8a6c9955837e36f99fc649c43784dd27f5b231f06ea741e898ac3425fd9', 
+  secret_key: '22300223' 
 };
 
 const CONFIG = { PROFIT_PERCENTAGE: 150 }; 
@@ -72,7 +72,6 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
 // ==========================================
 
 // --- USER: TIKET BANTUAN ---
-// --- USER: TIKET BANTUAN (VERSI CHAT) ---
 const TicketView = ({ userId }) => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -224,7 +223,6 @@ const TicketView = ({ userId }) => {
 };
 
 // --- ADMIN: KELOLA TIKET ---
-// --- ADMIN: KELOLA TIKET (VERSI CHAT) ---
 const AdminTicketView = () => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -527,11 +525,16 @@ const DashboardView = ({ profile, onNavigate }) => {
       </div>
       <div>
         <h3 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2"><div className="w-1 h-6 bg-indigo-500 rounded-full"></div> Pintasan Layanan</h3>
+        {/* === UPDATE: MENAMBAHKAN WA & TWITTER === */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <ServiceCard onClick={() => onNavigate('order')} icon={<Instagram />} label="Instagram" desc="Followers & Likes" color="from-pink-500 to-rose-500" iconColor="text-pink-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Music />} label="TikTok" desc="Views & Followers" color="from-cyan-500 to-blue-500" iconColor="text-cyan-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Youtube />} label="Youtube" desc="Subs & Watchtime" color="from-red-500 to-orange-500" iconColor="text-red-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Facebook />} label="Facebook" desc="Likes & Followers" color="from-blue-600 to-indigo-600" iconColor="text-blue-100" />
+          
+          {/* BARU: WhatsApp & Twitter */}
+          <ServiceCard onClick={() => onNavigate('order')} icon={<MessageCircle />} label="WhatsApp" desc="Spam Chat & Services" color="from-green-500 to-emerald-600" iconColor="text-green-100" />
+          <ServiceCard onClick={() => onNavigate('order')} icon={<Twitter />} label="Twitter / X" desc="Followers & Retweet" color="from-slate-700 to-black" iconColor="text-slate-200" />
         </div>
       </div>
     </div>
@@ -682,7 +685,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
            </div>
            {totalPrice > balance && <p className="text-red-400 text-xs font-bold bg-red-500/10 p-2 rounded-lg border border-red-500/20 text-center">Saldo tidak mencukupi!</p>}
            
-           {/* --- FITUR BARU: INFO PENTING DI BAWAH SALDO --- */}
            <div className="mt-4 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 animate-fade-in">
               <h5 className="font-bold text-blue-400 text-sm flex items-center gap-2 mb-2"><Info size={16}/> Harap Dibaca!</h5>
               <ul className="text-slate-300 text-xs space-y-2 list-disc pl-4">
