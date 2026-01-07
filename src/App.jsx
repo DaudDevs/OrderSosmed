@@ -68,19 +68,38 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
 };
 
 // --- MODAL INFO POPUP (TIMELINE STYLE) ---
+// --- MODAL INFO POPUP (TIMELINE STYLE + KLIK LINK) ---
 const InfoModal = ({ isOpen, onClose }) => {
     const [infos, setInfos] = useState([]);
 
     useEffect(() => {
         if (isOpen) {
             const fetchInfo = async () => {
-                // Ambil 5 pengumuman terakhir
                 const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(5);
                 if (data) setInfos(data);
             };
             fetchInfo();
         }
     }, [isOpen]);
+
+    // Fungsi pintar untuk mengubah teks URL menjadi Link Aktif
+    const renderWithLinks = (text) => {
+        // Pecah teks berdasarkan URL (http/https)
+        const parts = text.split(/(https?:\/\/[^\s]+)/g);
+        
+        return parts.map((part, i) => {
+            // Jika bagian ini adalah URL, jadikan tag <a>
+            if (part.match(/https?:\/\/[^\s]+/)) {
+                return (
+                    <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline break-all">
+                        {part}
+                    </a>
+                );
+            }
+            // Jika teks biasa, kembalikan apa adanya
+            return part;
+        });
+    };
 
     if (!isOpen) return null;
 
@@ -118,7 +137,12 @@ const InfoModal = ({ isOpen, onClose }) => {
                                         </span>
                                     </div>
                                     <h4 className="font-bold text-slate-800 text-sm mb-1 uppercase tracking-wide">{info.title}</h4>
-                                    <p className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">{info.content}</p>
+                                    
+                                    {/* PANGGIL FUNGSI RENDER LINK DI SINI */}
+                                    <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                        {renderWithLinks(info.content)}
+                                    </div>
+
                                 </div>
                             ))}
                         </div>
