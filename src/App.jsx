@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info, MessageCircle, Twitter
+  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info, MessageCircle, Twitter, Bell, Edit
 } from 'lucide-react';
 
 // ==========================================
@@ -67,18 +67,113 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
   );
 };
 
+// --- MODAL INFO POPUP (JENDELA MENGAMBANG) ---
+const InfoModal = ({ isOpen, onClose }) => {
+    const [info, setInfo] = useState(null);
+
+    useEffect(() => {
+        const fetchInfo = async () => {
+            const { data } = await supabase.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single();
+            if (data) setInfo(data);
+        };
+        if (isOpen) fetchInfo();
+    }, [isOpen]);
+
+    if (!isOpen || !info) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all scale-100">
+                <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2"><Bell className="text-indigo-600" size={20}/> Informasi Terbaru</h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                </div>
+                <div className="p-6">
+                    <h4 className="text-lg font-bold text-indigo-600 mb-2">{info.title}</h4>
+                    <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{info.content}</p>
+                    <p className="text-[10px] text-slate-400 mt-4 text-right">Diperbarui: {new Date(info.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="p-4 border-t bg-slate-50">
+                    <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95">
+                        Saya Sudah Membaca
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ==========================================
 // 3. PAGE COMPONENTS (USER & ADMIN)
 // ==========================================
 
-// --- USER: TIKET BANTUAN ---
+// --- ADMIN: KELOLA PENGUMUMAN (IKLAN) ---
+const AdminAnnouncementView = () => {
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => { fetchCurrentInfo(); }, []);
+
+    const fetchCurrentInfo = async () => {
+        const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(1).single();
+        if (data) {
+            setTitle(data.title);
+            setContent(data.content);
+        }
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const toastId = toast.loading("Menyimpan pengumuman...");
+        
+        // Nonaktifkan semua pengumuman lama dulu
+        await supabase.from('announcements').update({ is_active: false }).neq('id', 0);
+
+        // Buat pengumuman baru
+        const { error } = await supabase.from('announcements').insert([{ title, content, is_active: true }]);
+        
+        if (!error) {
+            toast.success("Pengumuman berhasil diupdate!", { id: toastId });
+        } else {
+            toast.error("Gagal update", { id: toastId });
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div className="max-w-2xl mx-auto bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl animate-fade-in">
+            <h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Bell className="text-yellow-400"/> Kelola Popup Informasi</h3>
+            <form onSubmit={handleSave} className="space-y-4">
+                <div>
+                    <label className="text-slate-400 text-xs font-bold uppercase mb-2 block">Judul Pengumuman</label>
+                    <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-yellow-500 outline-none" value={title} onChange={e => setTitle(e.target.value)} required />
+                </div>
+                <div>
+                    <label className="text-slate-400 text-xs font-bold uppercase mb-2 block">Isi Pengumuman</label>
+                    <textarea rows="6" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-yellow-500 outline-none" value={content} onChange={e => setContent(e.target.value)} required></textarea>
+                </div>
+                <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95">
+                    {loading ? <Loader2 className="animate-spin mx-auto"/> : 'Update Pengumuman'}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+// ... (KODE KOMPONEN LAIN: TicketView, AdminTicketView, AdminSaldoView, dll TETAP SAMA SEPERTI SEBELUMNYA)
+// AGAR TIDAK KEPANJANGAN, SAYA PERSINGKAT BAGIAN YANG TIDAK BERUBAH.
+// PASTIKAN ANDA TETAP MENYALIN KOMPONEN LAMA ANDA DI SINI JIKA BELUM ADA.
+
+// (Gunakan kode komponen TicketView, AdminTicketView, AdminOrderView, AdminSaldoView, DepositView, OrderView, OrderHistoryView, DashboardView, LoginPage DARI KODE SEBELUMNYA DI SINI)
+
+// --- USER: TIKET BANTUAN (VERSI CHAT) ---
 const TicketView = ({ userId }) => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [replies, setReplies] = useState([]);
     const [newReply, setNewReply] = useState('');
-    
-    // Form Baru
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -118,104 +213,30 @@ const TicketView = ({ userId }) => {
     const handleSendReply = async (e) => {
         e.preventDefault();
         if (!newReply.trim()) return;
-        
-        // Kirim Balasan
         await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]);
-        
-        // Update Status jadi Open lagi (agar admin tau ada balasan baru)
         await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id);
-        
-        setNewReply('');
-        fetchReplies(selectedTicket.id); // Refresh chat
+        setNewReply(''); fetchReplies(selectedTicket.id);
     };
 
     const handleCloseTicket = async () => {
-        if(!confirm("Yakin ingin menutup tiket ini? Anda tidak bisa membalas lagi.")) return;
+        if(!confirm("Yakin ingin menutup tiket ini?")) return;
         await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id);
-        toast.success("Tiket Ditutup");
-        fetchTickets();
-        setSelectedTicket(null);
+        toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null);
     };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[500px]">
-            {/* Sidebar List Tiket */}
             <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto">
                 <button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button>
-                <div className="space-y-2">
-                    {tickets.map(t => (
-                        <div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}>
-                            <div className="flex justify-between mb-1">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span>
-                                <span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-white text-sm font-bold truncate">{t.subject}</p>
-                        </div>
-                    ))}
-                </div>
+                <div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div>
             </div>
-
-            {/* Main Content (Form / Chat) */}
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
                 {isCreating ? (
-                    <div className="p-6">
-                        <h3 className="font-bold text-white mb-4">Tulis Keluhan</h3>
-                        <form onSubmit={handleCreateTicket} className="space-y-4">
-                            <input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required />
-                            <textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea>
-                            <button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button>
-                        </form>
-                    </div>
+                    <div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>
                 ) : selectedTicket ? (
-                    <>
-                        {/* Header Chat */}
-                        <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
-                            <div>
-                                <h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4>
-                                <p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p>
-                            </div>
-                            {selectedTicket.status !== 'Closed' && (
-                                <button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>
-                            )}
-                        </div>
-
-                        {/* Isi Chat */}
-                        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]">
-                            {/* Pesan Awal */}
-                            <div className="flex justify-end">
-                                <div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm">
-                                    <p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>
-                                    {selectedTicket.message}
-                                </div>
-                            </div>
-                            
-                            {/* Balasan-balasan */}
-                            {replies.map(r => (
-                                <div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}>
-                                        <p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p>
-                                        {r.message}
-                                        <p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Input Chat */}
-                        {selectedTicket.status !== 'Closed' ? (
-                            <form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2">
-                                <input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} />
-                                <button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button>
-                            </form>
-                        ) : (
-                            <div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>
-                        )}
-                    </>
+                    <><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-end"><div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-                        <MessageSquare size={40} className="mb-2 opacity-20"/>
-                        <p className="text-sm">Pilih tiket untuk melihat percakapan</p>
-                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>
                 )}
             </div>
         </div>
@@ -231,118 +252,26 @@ const AdminTicketView = () => {
 
     useEffect(() => { fetchTickets(); }, []);
 
-    const fetchTickets = async () => {
-        const { data } = await supabase.from('tickets').select('*, profiles(username)').order('created_at', { ascending: false });
-        if (data) setTickets(data);
-    };
-
-    const fetchReplies = async (ticketId) => {
-        const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
-        if (data) setReplies(data);
-    };
-
-    const handleSelectTicket = (ticket) => {
-        setSelectedTicket(ticket);
-        fetchReplies(ticket.id);
-    };
-
-    const handleSendReply = async (e) => {
-        e.preventDefault();
-        if (!newReply.trim()) return;
-
-        // Kirim sebagai Admin
-        await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'admin', message: newReply }]);
-        
-        // Update status jadi Replied
-        await supabase.from('tickets').update({ status: 'Replied' }).eq('id', selectedTicket.id);
-        
-        setNewReply('');
-        fetchReplies(selectedTicket.id);
-        fetchTickets(); // Refresh list agar status terupdate
-    };
-
-    const handleCloseTicket = async () => {
-        if(!confirm("Tutup tiket ini?")) return;
-        await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id);
-        toast.success("Tiket Ditutup");
-        fetchTickets();
-        setSelectedTicket(null);
-    };
+    const fetchTickets = async () => { const { data } = await supabase.from('tickets').select('*, profiles(username)').order('created_at', { ascending: false }); if (data) setTickets(data); };
+    const fetchReplies = async (ticketId) => { const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true }); if (data) setReplies(data); };
+    const handleSelectTicket = (ticket) => { setSelectedTicket(ticket); fetchReplies(ticket.id); };
+    const handleSendReply = async (e) => { e.preventDefault(); if (!newReply.trim()) return; await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'admin', message: newReply }]); await supabase.from('tickets').update({ status: 'Replied' }).eq('id', selectedTicket.id); setNewReply(''); fetchReplies(selectedTicket.id); fetchTickets(); };
+    const handleCloseTicket = async () => { if(!confirm("Tutup tiket ini?")) return; await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id); toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null); };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[600px]">
-            {/* List Tiket */}
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto">
-                <h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3>
-                <div className="space-y-2">
-                    {tickets.map(t => (
-                        <div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span>
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span>
-                            </div>
-                            <p className="text-white text-sm font-bold truncate">{t.subject}</p>
-                            <p className="text-slate-500 text-[10px] truncate">{t.message}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Chat Room */}
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p><p className="text-slate-500 text-[10px] truncate">{t.message}</p></div>))}</div></div>
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
                 {selectedTicket ? (
-                    <>
-                        <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center">
-                            <div>
-                                <h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4>
-                            </div>
-                            {selectedTicket.status !== 'Closed' && (
-                                <button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>
-                            )}
-                        </div>
-
-                        <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]">
-                            {/* Pesan Awal User */}
-                            <div className="flex justify-start">
-                                <div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm">
-                                    <p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>
-                                    {selectedTicket.message}
-                                </div>
-                            </div>
-
-                            {/* Replies */}
-                            {replies.map(r => (
-                                <div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}>
-                                        <p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p>
-                                        {r.message}
-                                        <p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {selectedTicket.status !== 'Closed' ? (
-                            <form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2">
-                                <input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} />
-                                <button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button>
-                            </form>
-                        ) : (
-                            <div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>
-                        )}
-                    </>
+                    <><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-start"><div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500">
-                        <MessageSquare size={40} className="mb-2 opacity-20"/>
-                        <p className="text-sm">Pilih tiket untuk membalas</p>
-                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>
                 )}
             </div>
         </div>
     );
 };
 
-// --- HALAMAN ADMIN: ISI SALDO & KELOLA USER ---
 const AdminSaldoView = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [amount, setAmount] = useState('');
@@ -352,7 +281,6 @@ const AdminSaldoView = () => {
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
-    // Ambil semua user urut berdasarkan saldo terbesar
     const { data } = await supabase.from('profiles').select('*').order('balance', { ascending: false });
     if (data) setUsers(data);
   };
@@ -376,25 +304,15 @@ const AdminSaldoView = () => {
     setLoading(false);
   };
 
-  // --- FITUR BARU: DELETE USER TOTAL (RPC) ---
   const handleDeleteUser = async (userId, username) => {
       if(!confirm(`⚠️ BAHAYA: Hapus user @${username} secara PERMANEN?\n\nAkun Login, Email, Saldo, dan History akan dihapus total.`)) return;
-      
       const toastId = toast.loading("Memusnahkan akun user...");
       try {
-          // Panggil fungsi SQL Sakti yang baru kita buat
-          const { error } = await supabase.rpc('delete_user_completely', { 
-              target_user_id: userId 
-          });
-
+          const { error } = await supabase.rpc('delete_user_completely', { target_user_id: userId });
           if (error) throw error;
-          
           toast.success(`User @${username} HILANG SELAMANYA!`, { id: toastId });
-          fetchUsers(); // Refresh tabel
-      } catch (err) {
-          console.error(err);
-          toast.error("Gagal: " + err.message, { id: toastId });
-      }
+          fetchUsers(); 
+      } catch (err) { console.error(err); toast.error("Gagal: " + err.message, { id: toastId }); }
   };
 
   return (
@@ -407,31 +325,12 @@ const AdminSaldoView = () => {
           <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl mt-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Kirim Saldo'}</button>
         </form>
       </div>
-      
       <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 overflow-hidden shadow-xl">
         <h3 className="font-bold text-white mb-4 text-lg">Kelola Member ({users.length})</h3>
         <div className="overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0">
           <table className="w-full text-sm text-left text-slate-300 min-w-[300px]">
             <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Saldo</th><th className="px-3 py-2 text-right">Aksi</th></tr></thead>
-            <tbody className="divide-y divide-slate-700/50">
-              {users.map(u => (
-                <tr key={u.id} className="hover:bg-slate-800/30">
-                  <td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td>
-                  <td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td>
-                  <td className="px-3 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button>
-                        {/* TOMBOL DELETE USER */}
-                        {u.username !== ADMIN_USERNAME && (
-                            <button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40">
-                                <Trash2 size={14}/>
-                            </button>
-                        )}
-                      </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody className="divide-y divide-slate-700/50">{users.map(u => (<tr key={u.id} className="hover:bg-slate-800/30"><td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td><td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td><td className="px-3 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button>{u.username !== ADMIN_USERNAME && (<button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40"><Trash2 size={14}/></button>)}</div></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -439,7 +338,6 @@ const AdminSaldoView = () => {
   );
 };
 
-// --- HALAMAN ADMIN: MONITORING ORDER ---
 const AdminOrderView = ({ onCheckStatus }) => {
     const [orders, setOrders] = useState([]);
     const [search, setSearch] = useState('');
@@ -447,59 +345,14 @@ const AdminOrderView = ({ onCheckStatus }) => {
 
     useEffect(() => { fetchAllOrders(); }, []);
 
-    const fetchAllOrders = async () => {
-        const { data, error } = await supabase.from('user_orders').select('*, profiles(username)').order('created_at', { ascending: false }).limit(50);
-        if (data) setOrders(data);
-    };
-
-    const handleAction = async (action, order) => {
-        if (loadingId) return; setLoadingId(order.id);
-        const toastId = toast.loading("Cek Status...");
-        try {
-            await onCheckStatus(order, toastId); 
-            fetchAllOrders(); 
-        } catch (error) { toast.error("Gagal", { id: toastId }); }
-        setLoadingId(null);
-    };
-
-    const filteredOrders = orders.filter(o => 
-        String(o.provider_id).includes(search) || 
-        String(o.target).toLowerCase().includes(search.toLowerCase()) ||
-        String(o.profiles?.username).toLowerCase().includes(search.toLowerCase())
-    );
+    const fetchAllOrders = async () => { const { data, error } = await supabase.from('user_orders').select('*, profiles(username)').order('created_at', { ascending: false }).limit(50); if (data) setOrders(data); };
+    const handleAction = async (action, order) => { if (loadingId) return; setLoadingId(order.id); const toastId = toast.loading("Cek Status..."); try { await onCheckStatus(order, toastId); fetchAllOrders(); } catch (error) { toast.error("Gagal", { id: toastId }); } setLoadingId(null); };
+    const filteredOrders = orders.filter(o => String(o.provider_id).includes(search) || String(o.target).toLowerCase().includes(search.toLowerCase()) || String(o.profiles?.username).toLowerCase().includes(search.toLowerCase()) );
 
     return (
         <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
-                <h3 className="font-bold text-white text-lg flex items-center gap-2"><ListOrdered className="text-purple-400"/> Monitoring Order</h3>
-                <div className="relative w-full md:w-64">
-                    <input type="text" placeholder="Cari ID / User / Target..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-purple-500 outline-none" value={search} onChange={e => setSearch(e.target.value)} />
-                    <Search className="absolute left-3 top-2.5 text-slate-500 w-4 h-4" />
-                </div>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-slate-300 min-w-[800px]">
-                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px]">
-                        <tr><th className="px-4 py-3">ID / User</th><th className="px-4 py-3">Layanan</th><th className="px-4 py-3">Target</th><th className="px-4 py-3">Harga/Modal</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-center">Cek</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/50">
-                        {filteredOrders.map(o => (
-                            <tr key={o.id} className="hover:bg-slate-800/30">
-                                <td className="px-4 py-3">
-                                    <div className="font-bold text-white">#{o.provider_id}</div>
-                                    <div className="text-[10px] text-purple-400">@{o.profiles?.username || 'Unknown'}</div>
-                                    <div className="text-[10px] text-slate-500">{new Date(o.created_at).toLocaleDateString()}</div>
-                                </td>
-                                <td className="px-4 py-3 text-xs max-w-[200px] truncate">{o.service_name}</td>
-                                <td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td>
-                                <td className="px-4 py-3"><div className="text-green-400 font-bold">{formatRupiah(o.price)}</div><div className="text-[10px] text-slate-500">Modal: {formatRupiah(o.modal)}</div></td>
-                                <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span></td>
-                                <td className="px-4 py-3 text-center"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}</button></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4"><h3 className="font-bold text-white text-lg flex items-center gap-2"><ListOrdered className="text-purple-400"/> Monitoring Order</h3><div className="relative w-full md:w-64"><input type="text" placeholder="Cari ID / User / Target..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-purple-500 outline-none" value={search} onChange={e => setSearch(e.target.value)} /><Search className="absolute left-3 top-2.5 text-slate-500 w-4 h-4" /></div></div>
+            <div className="overflow-x-auto"><table className="w-full text-sm text-left text-slate-300 min-w-[800px]"><thead className="bg-slate-800 text-slate-400 uppercase text-[10px]"><tr><th className="px-4 py-3">ID / User</th><th className="px-4 py-3">Layanan</th><th className="px-4 py-3">Target</th><th className="px-4 py-3">Harga/Modal</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-center">Cek</th></tr></thead><tbody className="divide-y divide-slate-700/50">{filteredOrders.map(o => (<tr key={o.id} className="hover:bg-slate-800/30"><td className="px-4 py-3"><div className="font-bold text-white">#{o.provider_id}</div><div className="text-[10px] text-purple-400">@{o.profiles?.username || 'Unknown'}</div><div className="text-[10px] text-slate-500">{new Date(o.created_at).toLocaleDateString()}</div></td><td className="px-4 py-3 text-xs max-w-[200px] truncate">{o.service_name}</td><td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td><td className="px-4 py-3"><div className="text-green-400 font-bold">{formatRupiah(o.price)}</div><div className="text-[10px] text-slate-500">Modal: {formatRupiah(o.modal)}</div></td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span></td><td className="px-4 py-3 text-center"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}</button></td></tr>))}</tbody></table></div>
         </div>
     );
 };
@@ -525,14 +378,11 @@ const DashboardView = ({ profile, onNavigate }) => {
       </div>
       <div>
         <h3 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2"><div className="w-1 h-6 bg-indigo-500 rounded-full"></div> Pintasan Layanan</h3>
-        {/* === UPDATE: MENAMBAHKAN WA & TWITTER === */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <ServiceCard onClick={() => onNavigate('order')} icon={<Instagram />} label="Instagram" desc="Followers & Likes" color="from-pink-500 to-rose-500" iconColor="text-pink-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Music />} label="TikTok" desc="Views & Followers" color="from-cyan-500 to-blue-500" iconColor="text-cyan-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Youtube />} label="Youtube" desc="Subs & Watchtime" color="from-red-500 to-orange-500" iconColor="text-red-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Facebook />} label="Facebook" desc="Likes & Followers" color="from-blue-600 to-indigo-600" iconColor="text-blue-100" />
-          
-          {/* BARU: WhatsApp & Twitter */}
           <ServiceCard onClick={() => onNavigate('order')} icon={<MessageCircle />} label="WhatsApp" desc="Spam Chat & Services" color="from-green-500 to-emerald-600" iconColor="text-green-100" />
           <ServiceCard onClick={() => onNavigate('order')} icon={<Twitter />} label="Twitter / X" desc="Followers & Retweet" color="from-slate-700 to-black" iconColor="text-slate-200" />
         </div>
@@ -885,20 +735,26 @@ const App = () => {
   const [services, setServices] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false); 
+  // State untuk popup/modal info
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   // 1. Cek Session Login
   useEffect(() => {
       supabase.auth.getSession().then(({ data: { session } }) => { 
           setSession(session); 
-          if (session) fetchUserProfile(session.user.id); 
+          if (session) {
+              fetchUserProfile(session.user.id);
+              setIsInfoOpen(true); // Tampilkan popup saat login
+          }
       });
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { 
           setSession(session); 
           if (session) {
               fetchUserProfile(session.user.id);
+              setIsInfoOpen(true); // Tampilkan popup saat sesi aktif
           } else {
-              setProfile(null); // Reset profil jika logout
+              setProfile(null); 
           }
       });
 
@@ -924,33 +780,20 @@ const App = () => {
 
   // 3. CCTV PENGHAPUSAN AKUN (METODE POLLING - ANTI GAGAL)
   useEffect(() => {
-      // Jika tidak ada user login, tidak perlu cek
       if (!session?.user?.id) return;
 
-      // Fungsi pengecekan
       const checkAccountStatus = async () => {
-          // Coba cari data diri sendiri di tabel profiles
-          const { data, error } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', session.user.id)
-              .maybeSingle(); // Gunakan maybeSingle agar tidak error merah di console jika kosong
-
-          // Logika: Jika data tidak ditemukan (null), berarti sudah dihapus Admin
+          const { data, error } = await supabase.from('profiles').select('id').eq('id', session.user.id).maybeSingle(); 
           if (!data) {
               console.warn("Akun tidak ditemukan di database. Melakukan logout paksa...");
               toast.error("Sesi berakhir: Akun Anda telah dihapus.", { duration: 5000 });
-              
               await supabase.auth.signOut();
               setSession(null);
               setProfile(null);
           }
       };
 
-      // Jalankan pengecekan setiap 5 detik (5000 ms)
       const intervalId = setInterval(checkAccountStatus, 5000);
-
-      // Bersihkan timer saat komponen di-unmount
       return () => clearInterval(intervalId);
   }, [session]);
 
@@ -1061,6 +904,9 @@ const App = () => {
          error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
        }}/>
 
+       {/* POPUP INFO */}
+       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
+
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
              <span>SosmedKu</span>
@@ -1079,6 +925,8 @@ const App = () => {
                     <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
                     <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
                     <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
+                    {/* MENU BARU ADMIN IKLAN */}
+                    <MenuItem icon={<Bell/>} label="Kelola Iklan" isActive={activePage === 'admin-ads'} onClick={() => { setActivePage('admin-ads'); setSidebarOpen(false); }} />
                 </div>
              )}
              <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
@@ -1108,6 +956,8 @@ const App = () => {
              {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
              {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
              {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
+             {/* MENU BARU ADMIN ADS */}
+             {activePage === 'admin-ads' && isAdmin && <AdminAnnouncementView />}
           </div>
        </main>
     </div>
