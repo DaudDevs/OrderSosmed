@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShoppingCart, CreditCard, LogOut, Menu, X,
   History, Key, CheckCircle2, Loader2, AlertCircle, 
   Instagram, Music, Youtube, Facebook, RefreshCw, RefreshCcw,
-  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info, MessageCircle, Twitter, Bell, Edit
+  MessageSquare, User, Search, Mail, ListOrdered, LifeBuoy, Send, Trash2, Info, MessageCircle, Twitter, Bell, Megaphone
 } from 'lucide-react';
 
 // ==========================================
@@ -67,35 +67,68 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
   );
 };
 
-// --- MODAL INFO POPUP (JENDELA MENGAMBANG) ---
+// --- MODAL INFO POPUP (TIMELINE STYLE) ---
 const InfoModal = ({ isOpen, onClose }) => {
-    const [info, setInfo] = useState(null);
+    const [infos, setInfos] = useState([]);
 
     useEffect(() => {
-        const fetchInfo = async () => {
-            const { data } = await supabase.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single();
-            if (data) setInfo(data);
-        };
-        if (isOpen) fetchInfo();
+        if (isOpen) {
+            const fetchInfo = async () => {
+                // Ambil 5 pengumuman terakhir
+                const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(5);
+                if (data) setInfos(data);
+            };
+            fetchInfo();
+        }
     }, [isOpen]);
 
-    if (!isOpen || !info) return null;
+    if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl transform transition-all scale-100">
-                <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2"><Bell className="text-indigo-600" size={20}/> Informasi Terbaru</h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-scale-up">
+                {/* Header */}
+                <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
+                        <Bell className="text-indigo-600" size={20}/> Informasi Terbaru
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors"><X size={24}/></button>
                 </div>
-                <div className="p-6">
-                    <h4 className="text-lg font-bold text-indigo-600 mb-2">{info.title}</h4>
-                    <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">{info.content}</p>
-                    <p className="text-[10px] text-slate-400 mt-4 text-right">Diperbarui: {new Date(info.created_at).toLocaleDateString()}</p>
+
+                {/* Content List */}
+                <div className="p-0 max-h-[60vh] overflow-y-auto bg-slate-50">
+                    {infos.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400 text-sm">Belum ada informasi terbaru.</div>
+                    ) : (
+                        <div className="divide-y divide-slate-200">
+                            {infos.map((info) => (
+                                <div key={info.id} className="p-5 hover:bg-white transition-colors">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        {info.type === 'Layanan' ? (
+                                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1 border border-green-200">
+                                                <RefreshCw size={10}/> Layanan
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 border border-blue-200">
+                                                <Info size={10}/> Informasi
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] text-slate-400">
+                                            {new Date(info.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}
+                                        </span>
+                                    </div>
+                                    <h4 className="font-bold text-slate-800 text-sm mb-1 uppercase tracking-wide">{info.title}</h4>
+                                    <p className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">{info.content}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
-                <div className="p-4 border-t bg-slate-50">
-                    <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95">
-                        Saya Sudah Membaca
+
+                {/* Footer */}
+                <div className="p-4 border-t bg-white">
+                    <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                        <CheckCircle2 size={18}/> Saya Sudah Membaca
                     </button>
                 </div>
             </div>
@@ -107,66 +140,92 @@ const InfoModal = ({ isOpen, onClose }) => {
 // 3. PAGE COMPONENTS (USER & ADMIN)
 // ==========================================
 
-// --- ADMIN: KELOLA PENGUMUMAN (IKLAN) ---
+// --- ADMIN: KELOLA PENGUMUMAN ---
 const AdminAnnouncementView = () => {
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
+    const [list, setList] = useState([]);
+    const [formData, setFormData] = useState({ title: '', content: '', type: 'Layanan' });
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => { fetchCurrentInfo(); }, []);
+    useEffect(() => { fetchAnnouncements(); }, []);
 
-    const fetchCurrentInfo = async () => {
-        const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(1).single();
-        if (data) {
-            setTitle(data.title);
-            setContent(data.content);
-        }
+    const fetchAnnouncements = async () => {
+        const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+        if (data) setList(data);
     };
 
-    const handleSave = async (e) => {
+    const handleAdd = async (e) => {
         e.preventDefault();
         setLoading(true);
-        const toastId = toast.loading("Menyimpan pengumuman...");
-        
-        // Nonaktifkan semua pengumuman lama dulu
-        await supabase.from('announcements').update({ is_active: false }).neq('id', 0);
-
-        // Buat pengumuman baru
-        const { error } = await supabase.from('announcements').insert([{ title, content, is_active: true }]);
-        
+        const { error } = await supabase.from('announcements').insert([formData]);
         if (!error) {
-            toast.success("Pengumuman berhasil diupdate!", { id: toastId });
+            toast.success("Info berhasil diposting!");
+            setFormData({ title: '', content: '', type: 'Layanan' });
+            fetchAnnouncements();
         } else {
-            toast.error("Gagal update", { id: toastId });
+            toast.error("Gagal: " + error.message);
         }
         setLoading(false);
     };
 
+    const handleDelete = async (id) => {
+        if(!confirm("Hapus info ini?")) return;
+        await supabase.from('announcements').delete().eq('id', id);
+        fetchAnnouncements();
+        toast.success("Info dihapus");
+    };
+
     return (
-        <div className="max-w-2xl mx-auto bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl animate-fade-in">
-            <h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Bell className="text-yellow-400"/> Kelola Popup Informasi</h3>
-            <form onSubmit={handleSave} className="space-y-4">
-                <div>
-                    <label className="text-slate-400 text-xs font-bold uppercase mb-2 block">Judul Pengumuman</label>
-                    <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-yellow-500 outline-none" value={title} onChange={e => setTitle(e.target.value)} required />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+            {/* Form Input */}
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
+                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-yellow-400"/> Tambah Info</h3>
+                <form onSubmit={handleAdd} className="space-y-4">
+                    <div>
+                        <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Kategori</label>
+                        <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                            <option value="Layanan">🟢 Update Layanan</option>
+                            <option value="Informasi">🔵 Informasi Umum</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Judul</label>
+                        <input type="text" placeholder="Contoh: LAYANAN TIKTOK MURAH" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                    </div>
+                    <div>
+                        <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Isi Pesan</label>
+                        <textarea rows="5" placeholder="Detail informasi..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} required></textarea>
+                    </div>
+                    <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95">
+                        {loading ? <Loader2 className="animate-spin mx-auto"/> : 'Posting Sekarang'}
+                    </button>
+                </form>
+            </div>
+
+            {/* List Info */}
+            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
+                <h3 className="font-bold text-white mb-4 flex items-center gap-2"><ListOrdered className="text-indigo-400"/> Riwayat Pengumuman</h3>
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    {list.map(item => (
+                        <div key={item.id} className="bg-[#0f172a] p-4 rounded-xl border border-slate-700 flex justify-between items-start gap-4 hover:border-slate-500 transition-all">
+                            <div>
+                                <div className="flex gap-2 mb-2">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${item.type === 'Layanan' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{item.type}</span>
+                                    <span className="text-[10px] text-slate-500 flex items-center">{new Date(item.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <h4 className="text-white font-bold text-sm mb-1">{item.title}</h4>
+                                <p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">{item.content}</p>
+                            </div>
+                            <button onClick={() => handleDelete(item.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500 hover:text-white border border-red-500/20 transition-all flex-shrink-0">
+                                <Trash2 size={16}/>
+                            </button>
+                        </div>
+                    ))}
+                    {list.length === 0 && <div className="text-center text-slate-500 py-10 text-sm">Belum ada pengumuman yang dibuat.</div>}
                 </div>
-                <div>
-                    <label className="text-slate-400 text-xs font-bold uppercase mb-2 block">Isi Pengumuman</label>
-                    <textarea rows="6" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-yellow-500 outline-none" value={content} onChange={e => setContent(e.target.value)} required></textarea>
-                </div>
-                <button disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95">
-                    {loading ? <Loader2 className="animate-spin mx-auto"/> : 'Update Pengumuman'}
-                </button>
-            </form>
+            </div>
         </div>
     );
 };
-
-// ... (KODE KOMPONEN LAIN: TicketView, AdminTicketView, AdminSaldoView, dll TETAP SAMA SEPERTI SEBELUMNYA)
-// AGAR TIDAK KEPANJANGAN, SAYA PERSINGKAT BAGIAN YANG TIDAK BERUBAH.
-// PASTIKAN ANDA TETAP MENYALIN KOMPONEN LAMA ANDA DI SINI JIKA BELUM ADA.
-
-// (Gunakan kode komponen TicketView, AdminTicketView, AdminOrderView, AdminSaldoView, DepositView, OrderView, OrderHistoryView, DashboardView, LoginPage DARI KODE SEBELUMNYA DI SINI)
 
 // --- USER: TIKET BANTUAN (VERSI CHAT) ---
 const TicketView = ({ userId }) => {
@@ -180,70 +239,24 @@ const TicketView = ({ userId }) => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => { fetchTickets(); }, [userId]);
-
-    const fetchTickets = async () => {
-        const { data } = await supabase.from('tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-        if (data) setTickets(data);
-    };
-
-    const fetchReplies = async (ticketId) => {
-        const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
-        if (data) setReplies(data);
-    };
-
-    const handleSelectTicket = (ticket) => {
-        setSelectedTicket(ticket);
-        fetchReplies(ticket.id);
-        setIsCreating(false);
-    };
-
-    const handleCreateTicket = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        const toastId = toast.loading("Membuat tiket...");
-        try {
-            const { error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message, status: 'Open' }]);
-            if (error) throw error;
-            toast.success("Tiket dibuat!", { id: toastId });
-            setSubject(''); setMessage(''); setIsCreating(false); fetchTickets();
-        } catch (err) { toast.error("Gagal", { id: toastId }); }
-        setLoading(false);
-    };
-
-    const handleSendReply = async (e) => {
-        e.preventDefault();
-        if (!newReply.trim()) return;
-        await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]);
-        await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id);
-        setNewReply(''); fetchReplies(selectedTicket.id);
-    };
-
-    const handleCloseTicket = async () => {
-        if(!confirm("Yakin ingin menutup tiket ini?")) return;
-        await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id);
-        toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null);
-    };
+    const fetchTickets = async () => { const { data } = await supabase.from('tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false }); if (data) setTickets(data); };
+    const fetchReplies = async (ticketId) => { const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true }); if (data) setReplies(data); };
+    const handleSelectTicket = (ticket) => { setSelectedTicket(ticket); fetchReplies(ticket.id); setIsCreating(false); };
+    const handleCreateTicket = async (e) => { e.preventDefault(); setLoading(true); const toastId = toast.loading("Membuat tiket..."); try { const { error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message, status: 'Open' }]); if (error) throw error; toast.success("Tiket dibuat!", { id: toastId }); setSubject(''); setMessage(''); setIsCreating(false); fetchTickets(); } catch (err) { toast.error("Gagal", { id: toastId }); } setLoading(false); };
+    const handleSendReply = async (e) => { e.preventDefault(); if (!newReply.trim()) return; await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]); await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id); setNewReply(''); fetchReplies(selectedTicket.id); };
+    const handleCloseTicket = async () => { if(!confirm("Yakin ingin menutup tiket ini?")) return; await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id); toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null); };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[500px]">
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto">
-                <button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button>
-                <div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div>
-            </div>
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div></div>
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
-                {isCreating ? (
-                    <div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>
-                ) : selectedTicket ? (
-                    <><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-end"><div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>
-                )}
+                {isCreating ? (<div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>) : selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-end"><div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>)}
             </div>
         </div>
     );
 };
 
-// --- ADMIN: KELOLA TIKET ---
+// --- ADMIN: KELOLA TIKET (VERSI CHAT) ---
 const AdminTicketView = () => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -251,7 +264,6 @@ const AdminTicketView = () => {
     const [newReply, setNewReply] = useState('');
 
     useEffect(() => { fetchTickets(); }, []);
-
     const fetchTickets = async () => { const { data } = await supabase.from('tickets').select('*, profiles(username)').order('created_at', { ascending: false }); if (data) setTickets(data); };
     const fetchReplies = async (ticketId) => { const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true }); if (data) setReplies(data); };
     const handleSelectTicket = (ticket) => { setSelectedTicket(ticket); fetchReplies(ticket.id); };
@@ -262,16 +274,13 @@ const AdminTicketView = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[600px]">
             <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p><p className="text-slate-500 text-[10px] truncate">{t.message}</p></div>))}</div></div>
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
-                {selectedTicket ? (
-                    <><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-start"><div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>
-                )}
+                {selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-start"><div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>)}
             </div>
         </div>
     );
 };
 
+// --- HALAMAN ADMIN: ISI SALDO & KELOLA USER ---
 const AdminSaldoView = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [amount, setAmount] = useState('');
@@ -279,72 +288,25 @@ const AdminSaldoView = () => {
   const [users, setUsers] = useState([]);
 
   useEffect(() => { fetchUsers(); }, []);
-
-  const fetchUsers = async () => {
-    const { data } = await supabase.from('profiles').select('*').order('balance', { ascending: false });
-    if (data) setUsers(data);
-  };
-
-  const handleTopUp = async (e) => {
-    e.preventDefault();
-    if (!confirm(`Kirim saldo ${formatRupiah(amount)} ke @${targetUsername}?`)) return;
-    setLoading(true);
-    const toastId = toast.loading("Mengirim saldo...");
-    try {
-      const { data: targetUser, error: findError } = await supabase.from('profiles').select('*').eq('username', targetUsername).single();
-      if (findError || !targetUser) { throw new Error("Username tidak ditemukan!"); }
-
-      const newBalance = Number(targetUser.balance) + Number(amount);
-      const { error: updateError } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', targetUser.id);
-      if (updateError) throw updateError;
-
-      toast.success("Saldo Berhasil Dikirim!", { id: toastId });
-      setTargetUsername(''); setAmount(''); fetchUsers();
-    } catch (err) { toast.error("Gagal: " + err.message, { id: toastId }); }
-    setLoading(false);
-  };
-
-  const handleDeleteUser = async (userId, username) => {
-      if(!confirm(`⚠️ BAHAYA: Hapus user @${username} secara PERMANEN?\n\nAkun Login, Email, Saldo, dan History akan dihapus total.`)) return;
-      const toastId = toast.loading("Memusnahkan akun user...");
-      try {
-          const { error } = await supabase.rpc('delete_user_completely', { target_user_id: userId });
-          if (error) throw error;
-          toast.success(`User @${username} HILANG SELAMANYA!`, { id: toastId });
-          fetchUsers(); 
-      } catch (err) { console.error(err); toast.error("Gagal: " + err.message, { id: toastId }); }
-  };
+  const fetchUsers = async () => { const { data } = await supabase.from('profiles').select('*').order('balance', { ascending: false }); if (data) setUsers(data); };
+  const handleTopUp = async (e) => { e.preventDefault(); if (!confirm(`Kirim saldo ${formatRupiah(amount)} ke @${targetUsername}?`)) return; setLoading(true); const toastId = toast.loading("Mengirim saldo..."); try { const { data: targetUser, error: findError } = await supabase.from('profiles').select('*').eq('username', targetUsername).single(); if (findError || !targetUser) { throw new Error("Username tidak ditemukan!"); } const newBalance = Number(targetUser.balance) + Number(amount); const { error: updateError } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', targetUser.id); if (updateError) throw updateError; toast.success("Saldo Berhasil Dikirim!", { id: toastId }); setTargetUsername(''); setAmount(''); fetchUsers(); } catch (err) { toast.error("Gagal: " + err.message, { id: toastId }); } setLoading(false); };
+  const handleDeleteUser = async (userId, username) => { if(!confirm(`⚠️ BAHAYA: Hapus user @${username} secara PERMANEN?\n\nAkun Login, Email, Saldo, dan History akan dihapus total.`)) return; const toastId = toast.loading("Memusnahkan akun user..."); try { const { error } = await supabase.rpc('delete_user_completely', { target_user_id: userId }); if (error) throw error; toast.success(`User @${username} HILANG SELAMANYA!`, { id: toastId }); fetchUsers(); } catch (err) { console.error(err); toast.error("Gagal: " + err.message, { id: toastId }); } };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
-      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 shadow-xl h-fit">
-        <h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Key className="text-yellow-400"/> Admin: Isi Saldo</h3>
-        <form onSubmit={handleTopUp} className="space-y-4">
-          <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Username Member" value={targetUsername} onChange={e => setTargetUsername(e.target.value)} required />
-          <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Nominal" value={amount} onChange={e => setAmount(e.target.value)} required />
-          <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl mt-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Kirim Saldo'}</button>
-        </form>
-      </div>
-      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 overflow-hidden shadow-xl">
-        <h3 className="font-bold text-white mb-4 text-lg">Kelola Member ({users.length})</h3>
-        <div className="overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0">
-          <table className="w-full text-sm text-left text-slate-300 min-w-[300px]">
-            <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Saldo</th><th className="px-3 py-2 text-right">Aksi</th></tr></thead>
-            <tbody className="divide-y divide-slate-700/50">{users.map(u => (<tr key={u.id} className="hover:bg-slate-800/30"><td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td><td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td><td className="px-3 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button>{u.username !== ADMIN_USERNAME && (<button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40"><Trash2 size={14}/></button>)}</div></td></tr>))}</tbody>
-          </table>
-        </div>
-      </div>
+      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 shadow-xl h-fit"><h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Key className="text-yellow-400"/> Admin: Isi Saldo</h3><form onSubmit={handleTopUp} className="space-y-4"><input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Username Member" value={targetUsername} onChange={e => setTargetUsername(e.target.value)} required /><input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Nominal" value={amount} onChange={e => setAmount(e.target.value)} required /><button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl mt-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Kirim Saldo'}</button></form></div>
+      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 overflow-hidden shadow-xl"><h3 className="font-bold text-white mb-4 text-lg">Kelola Member ({users.length})</h3><div className="overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0"><table className="w-full text-sm text-left text-slate-300 min-w-[300px]"><thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Saldo</th><th className="px-3 py-2 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-slate-700/50">{users.map(u => (<tr key={u.id} className="hover:bg-slate-800/30"><td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td><td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td><td className="px-3 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button>{u.username !== ADMIN_USERNAME && (<button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40"><Trash2 size={14}/></button>)}</div></td></tr>))}</tbody></table></div></div>
     </div>
   );
 };
 
+// --- HALAMAN ADMIN: MONITORING ORDER ---
 const AdminOrderView = ({ onCheckStatus }) => {
     const [orders, setOrders] = useState([]);
     const [search, setSearch] = useState('');
     const [loadingId, setLoadingId] = useState(null);
 
     useEffect(() => { fetchAllOrders(); }, []);
-
     const fetchAllOrders = async () => { const { data, error } = await supabase.from('user_orders').select('*, profiles(username)').order('created_at', { ascending: false }).limit(50); if (data) setOrders(data); };
     const handleAction = async (action, order) => { if (loadingId) return; setLoadingId(order.id); const toastId = toast.loading("Cek Status..."); try { await onCheckStatus(order, toastId); fetchAllOrders(); } catch (error) { toast.error("Gagal", { id: toastId }); } setLoadingId(null); };
     const filteredOrders = orders.filter(o => String(o.provider_id).includes(search) || String(o.target).toLowerCase().includes(search.toLowerCase()) || String(o.profiles?.username).toLowerCase().includes(search.toLowerCase()) );
