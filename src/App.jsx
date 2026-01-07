@@ -347,6 +347,7 @@ const DashboardView = ({ profile, onNavigate }) => {
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        {/* ... (Bagian Saldo & Status Akun Tidak Berubah) ... */}
         <div className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl p-6 md:p-8 border border-indigo-500/30 shadow-lg bg-gradient-to-br from-indigo-900/40 to-slate-900/40">
             <div className="absolute top-0 right-0 p-3 opacity-10"><CreditCard size={120}/></div>
             <p className="text-indigo-200 font-medium mb-1 text-sm md:text-base">Saldo Tersedia</p>
@@ -362,28 +363,43 @@ const DashboardView = ({ profile, onNavigate }) => {
           </div>
         </div>
       </div>
+
       <div>
         <h3 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2"><div className="w-1 h-6 bg-indigo-500 rounded-full"></div> Pintasan Layanan</h3>
+        
+        {/* UPDATE: onNavigate sekarang mengirim kata kunci layanan */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <ServiceCard onClick={() => onNavigate('order')} icon={<Instagram />} label="Instagram" desc="Followers & Likes" color="from-pink-500 to-rose-500" iconColor="text-pink-100" />
-          <ServiceCard onClick={() => onNavigate('order')} icon={<Music />} label="TikTok" desc="Views & Followers" color="from-cyan-500 to-blue-500" iconColor="text-cyan-100" />
-          <ServiceCard onClick={() => onNavigate('order')} icon={<Youtube />} label="Youtube" desc="Subs & Watchtime" color="from-red-500 to-orange-500" iconColor="text-red-100" />
-          <ServiceCard onClick={() => onNavigate('order')} icon={<Facebook />} label="Facebook" desc="Likes & Followers" color="from-blue-600 to-indigo-600" iconColor="text-blue-100" />
-          <ServiceCard onClick={() => onNavigate('order')} icon={<MessageCircle />} label="WhatsApp" desc="Spam Chat & Services" color="from-green-500 to-emerald-600" iconColor="text-green-100" />
-          <ServiceCard onClick={() => onNavigate('order')} icon={<Twitter />} label="Twitter / X" desc="Followers & Retweet" color="from-slate-700 to-black" iconColor="text-slate-200" />
+          <ServiceCard onClick={() => onNavigate('order', 'Instagram')} icon={<Instagram />} label="Instagram" desc="Followers & Likes" color="from-pink-500 to-rose-500" iconColor="text-pink-100" />
+          <ServiceCard onClick={() => onNavigate('order', 'TikTok')} icon={<Music />} label="TikTok" desc="Views & Followers" color="from-cyan-500 to-blue-500" iconColor="text-cyan-100" />
+          <ServiceCard onClick={() => onNavigate('order', 'Youtube')} icon={<Youtube />} label="Youtube" desc="Subs & Watchtime" color="from-red-500 to-orange-500" iconColor="text-red-100" />
+          <ServiceCard onClick={() => onNavigate('order', 'Facebook')} icon={<Facebook />} label="Facebook" desc="Likes & Followers" color="from-blue-600 to-indigo-600" iconColor="text-blue-100" />
+          
+          <ServiceCard onClick={() => onNavigate('order', 'WhatsApp')} icon={<MessageCircle />} label="WhatsApp" desc="Spam Chat & Services" color="from-green-500 to-emerald-600" iconColor="text-green-100" />
+          <ServiceCard onClick={() => onNavigate('order', 'Twitter')} icon={<Twitter />} label="Twitter / X" desc="Followers & Retweet" color="from-slate-700 to-black" iconColor="text-slate-200" />
         </div>
       </div>
     </div>
   );
 };
 
-const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
+// Tambahkan prop 'prefillSearch'
+const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }) => {
   const [selectedCatId, setSelectedCatId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [target, setTarget] = useState('');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  // Inisialisasi searchTerm dengan prefillSearch jika ada
+  const [searchTerm, setSearchTerm] = useState(prefillSearch || '');
+
+  // Efek: Jika prefillSearch berubah (misal user klik shortcut baru), update searchTerm & reset pilihan
+  useEffect(() => {
+      if (prefillSearch) {
+          setSearchTerm(prefillSearch);
+          setSelectedCatId('');
+          setSelectedServiceId('');
+      }
+  }, [prefillSearch]);
 
   const getVal = (item, keys) => {
     if (!item) return null;
@@ -392,6 +408,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
   };
 
   const validServices = Array.isArray(services) ? services : [];
+  // ... (Sisa kode logika filter services, categories, dll TETAP SAMA, tidak perlu diubah) ...
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
@@ -450,6 +467,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
            <div className="relative">
               <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
               <div className="relative">
+                  {/* Input Search otomatis terisi dari state searchTerm */}
                   <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
                     onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
                   />
@@ -459,6 +477,7 @@ const OrderView = ({ services, balance, onOrder, refreshProfile }) => {
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="md:col-span-2">
+                  {/* Label berubah jika ada filter */}
                   <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
                   <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
                       <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
@@ -721,8 +740,10 @@ const App = () => {
   const [services, setServices] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false); 
-  // State untuk popup/modal info
   const [isInfoOpen, setIsInfoOpen] = useState(false);
+  
+  // STATE BARU: Untuk menyimpan kata kunci pencarian otomatis
+  const [orderSearchPrefill, setOrderSearchPrefill] = useState('');
 
   // 1. Cek Session Login
   useEffect(() => {
@@ -730,7 +751,7 @@ const App = () => {
           setSession(session); 
           if (session) {
               fetchUserProfile(session.user.id);
-              setIsInfoOpen(true); // Tampilkan popup saat login
+              setIsInfoOpen(true);
           }
       });
 
@@ -738,7 +759,7 @@ const App = () => {
           setSession(session); 
           if (session) {
               fetchUserProfile(session.user.id);
-              setIsInfoOpen(true); // Tampilkan popup saat sesi aktif
+              setIsInfoOpen(true);
           } else {
               setProfile(null); 
           }
@@ -751,7 +772,6 @@ const App = () => {
   const fetchUserProfile = async (userId) => {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
       
-      // JIKA DATA PROFIL HILANG (DIHAPUS ADMIN), PAKSA LOGOUT
       if (error || !data) {
           console.warn("User tidak ditemukan, melakukan auto logout...");
           await supabase.auth.signOut();
@@ -764,10 +784,9 @@ const App = () => {
       if (data) setProfile(data);
   };
 
-  // 3. CCTV PENGHAPUSAN AKUN (METODE POLLING - ANTI GAGAL)
+  // 3. CCTV PENGHAPUSAN AKUN (POLLING)
   useEffect(() => {
       if (!session?.user?.id) return;
-
       const checkAccountStatus = async () => {
           const { data, error } = await supabase.from('profiles').select('id').eq('id', session.user.id).maybeSingle(); 
           if (!data) {
@@ -778,12 +797,11 @@ const App = () => {
               setProfile(null);
           }
       };
-
       const intervalId = setInterval(checkAccountStatus, 5000);
       return () => clearInterval(intervalId);
   }, [session]);
 
-  // 4. Ambil Layanan (Hanya jika login)
+  // 4. Ambil Layanan
   useEffect(() => {
       if (session) {
           const getServices = async () => {
@@ -795,6 +813,20 @@ const App = () => {
           getServices();
       }
   }, [session]);
+
+  // FUNGSI NAVIGASI PINTAR (MENERIMA KEYWORD)
+  const handleNavigate = (page, keyword = '') => {
+      setActivePage(page);
+      setSidebarOpen(false); // Tutup sidebar mobile
+      
+      if (page === 'order') {
+          // Jika ke halaman order, set kata kunci pencarian
+          setOrderSearchPrefill(keyword);
+      } else {
+          // Jika pindah halaman lain, reset pencarian
+          setOrderSearchPrefill('');
+      }
+  };
 
   // --- Logic Transaksi dll (Tidak Berubah) ---
   const handlePlaceOrder = async (data, details) => {
@@ -826,7 +858,6 @@ const App = () => {
               const newData = res.data.data;
               if (!newData) throw new Error("Data kosong");
 
-              // LOGIKA AUTO REFUND
               const statusLower = String(newData.status).toLowerCase();
               let newStatus = newData.status;
               let refundAmount = 0;
@@ -890,7 +921,6 @@ const App = () => {
          error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
        }}/>
 
-       {/* POPUP INFO */}
        <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
 
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -899,20 +929,20 @@ const App = () => {
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-             <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => { setActivePage('dashboard'); setSidebarOpen(false); }} />
-             <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => { setActivePage('order'); setSidebarOpen(false); }} />
-             <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => { setActivePage('history'); setSidebarOpen(false); }} />
-             <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => { setActivePage('deposit'); setSidebarOpen(false); }} />
-             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => { setActivePage('ticket'); setSidebarOpen(false); }} />
+             {/* UPDATE: Gunakan handleNavigate, bukan setActivePage */}
+             <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => handleNavigate('dashboard')} />
+             <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => handleNavigate('order')} />
+             <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => handleNavigate('history')} />
+             <MenuItem icon={<CreditCard/>} label="Deposit" isActive={activePage === 'deposit'} onClick={() => handleNavigate('deposit')} />
+             <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => handleNavigate('ticket')} />
 
              {isAdmin && (
                 <div className="pt-4 mt-4 border-t border-slate-700/50">
                     <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
-                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => { setActivePage('admin-saldo'); setSidebarOpen(false); }} />
-                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => { setActivePage('admin-order'); setSidebarOpen(false); }} />
-                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => { setActivePage('admin-ticket'); setSidebarOpen(false); }} />
-                    {/* MENU BARU ADMIN IKLAN */}
-                    <MenuItem icon={<Bell/>} label="Kelola Iklan" isActive={activePage === 'admin-ads'} onClick={() => { setActivePage('admin-ads'); setSidebarOpen(false); }} />
+                    <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => handleNavigate('admin-saldo')} />
+                    <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => handleNavigate('admin-order')} />
+                    <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => handleNavigate('admin-ticket')} />
+                    <MenuItem icon={<Bell/>} label="Kelola Iklan" isActive={activePage === 'admin-ads'} onClick={() => handleNavigate('admin-ads')} />
                 </div>
              )}
              <MenuItem icon={<LogOut/>} label="Keluar" variant="danger" onClick={handleLogout} />
@@ -933,8 +963,10 @@ const App = () => {
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
-             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={setActivePage} />}
-             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} />}
+             {/* UPDATE: Passing onNavigate ke Dashboard dan prefillSearch ke OrderView */}
+             {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={handleNavigate} />}
+             {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} prefillSearch={orderSearchPrefill} />}
+             
              {activePage === 'history' && <OrderHistoryView userId={session.user.id} onCheckStatus={handleCheckStatus} onRefill={handleRefill} />}
              {activePage === 'deposit' && <DepositView />}
              {activePage === 'ticket' && <TicketView userId={session.user.id} />}
@@ -942,7 +974,6 @@ const App = () => {
              {activePage === 'admin-saldo' && isAdmin && <AdminSaldoView />}
              {activePage === 'admin-order' && isAdmin && <AdminOrderView onCheckStatus={handleCheckStatus} />}
              {activePage === 'admin-ticket' && isAdmin && <AdminTicketView />}
-             {/* MENU BARU ADMIN ADS */}
              {activePage === 'admin-ads' && isAdmin && <AdminAnnouncementView />}
           </div>
        </main>
