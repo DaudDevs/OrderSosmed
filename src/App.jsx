@@ -971,7 +971,7 @@ const App = () => {
              
              {/* --- LOGO GAMBAR --- */}
              <img 
-                src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" // Ganti dengan Link Logo Kamu
+                src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/sign/asset/ChatGPT_Image_Jan_5__2026__11_31_22_PM-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wNjIxMTJjOS0wYzAxLTRlNTUtYmVkMC05MGM1NTM4MjFhZDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldC9DaGF0R1BUX0ltYWdlX0phbl81X18yMDI2X18xMV8zMV8yMl9QTS1yZW1vdmViZy1wcmV2aWV3LnBuZyIsImlhdCI6MTc2Nzg2ODg4OSwiZXhwIjoyMDgzMjI4ODg5fQ.d4u_MI1yK8miUlIUqq1E-EGOZKP8Kub55vubvGN5hCk" // Ganti dengan Link Logo Kamu
                 alt="Logo SosmedKu" 
                 className="h-10 w-auto object-contain" 
              />
