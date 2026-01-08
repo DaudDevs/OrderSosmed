@@ -968,15 +968,7 @@ const App = () => {
 
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             
-             {/* --- LOGO GAMBAR --- */}
-             <img 
-                src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/sign/asset/ChatGPT_Image_Jan_5__2026__11_31_22_PM-removebg-preview.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8wNjIxMTJjOS0wYzAxLTRlNTUtYmVkMC05MGM1NTM4MjFhZDgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhc3NldC9DaGF0R1BUX0ltYWdlX0phbl81X18yMDI2X18xMV8zMV8yMl9QTS1yZW1vdmViZy1wcmV2aWV3LnBuZyIsImlhdCI6MTc2Nzg2ODg4OSwiZXhwIjoyMDgzMjI4ODg5fQ.d4u_MI1yK8miUlIUqq1E-EGOZKP8Kub55vubvGN5hCk" // Ganti dengan Link Logo Kamu
-                alt="Logo SosmedKu" 
-                className="h-39 w-auto object-contain" 
-             />
-             {/* ------------------- */}
-
+             <span>SosmedKu</span>
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
