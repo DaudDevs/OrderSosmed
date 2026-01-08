@@ -67,7 +67,6 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
   );
 };
 
-// --- MODAL INFO POPUP (TIMELINE STYLE) ---
 // --- MODAL INFO POPUP (TIMELINE STYLE + KLIK LINK) ---
 const InfoModal = ({ isOpen, onClose }) => {
     const [infos, setInfos] = useState([]);
@@ -84,19 +83,15 @@ const InfoModal = ({ isOpen, onClose }) => {
 
     // Fungsi pintar untuk mengubah teks URL menjadi Link Aktif
     const renderWithLinks = (text) => {
-        // Pecah teks berdasarkan URL (http/https)
         const parts = text.split(/(https?:\/\/[^\s]+)/g);
-        
         return parts.map((part, i) => {
-            // Jika bagian ini adalah URL, jadikan tag <a>
             if (part.match(/https?:\/\/[^\s]+/)) {
                 return (
-                    <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline break-all">
+                    <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 font-bold hover:underline break-all">
                         {part}
                     </a>
                 );
             }
-            // Jika teks biasa, kembalikan apa adanya
             return part;
         });
     };
@@ -106,15 +101,12 @@ const InfoModal = ({ isOpen, onClose }) => {
     return (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-scale-up">
-                {/* Header */}
                 <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
                     <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
                         <Bell className="text-indigo-600" size={20}/> Informasi Terbaru
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors"><X size={24}/></button>
                 </div>
-
-                {/* Content List */}
                 <div className="p-0 max-h-[60vh] overflow-y-auto bg-slate-50">
                     {infos.length === 0 ? (
                         <div className="p-8 text-center text-slate-400 text-sm">Belum ada informasi terbaru.</div>
@@ -124,32 +116,23 @@ const InfoModal = ({ isOpen, onClose }) => {
                                 <div key={info.id} className="p-5 hover:bg-white transition-colors">
                                     <div className="flex items-center gap-2 mb-2">
                                         {info.type === 'Layanan' ? (
-                                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1 border border-green-200">
-                                                <RefreshCw size={10}/> Layanan
-                                            </span>
+                                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1 border border-green-200"><RefreshCw size={10}/> Layanan</span>
                                         ) : (
-                                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 border border-blue-200">
-                                                <Info size={10}/> Informasi
-                                            </span>
+                                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 border border-blue-200"><Info size={10}/> Informasi</span>
                                         )}
                                         <span className="text-[10px] text-slate-400">
                                             {new Date(info.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}
                                         </span>
                                     </div>
                                     <h4 className="font-bold text-slate-800 text-sm mb-1 uppercase tracking-wide">{info.title}</h4>
-                                    
-                                    {/* PANGGIL FUNGSI RENDER LINK DI SINI */}
                                     <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
                                         {renderWithLinks(info.content)}
                                     </div>
-
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
-
-                {/* Footer */}
                 <div className="p-4 border-t bg-white">
                     <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
                         <CheckCircle2 size={18}/> Saya Sudah Membaca
@@ -200,7 +183,6 @@ const AdminAnnouncementView = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-            {/* Form Input */}
             <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-yellow-400"/> Tambah Info</h3>
                 <form onSubmit={handleAdd} className="space-y-4">
@@ -224,8 +206,6 @@ const AdminAnnouncementView = () => {
                     </button>
                 </form>
             </div>
-
-            {/* List Info */}
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2"><ListOrdered className="text-indigo-400"/> Riwayat Pengumuman</h3>
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
@@ -251,51 +231,66 @@ const AdminAnnouncementView = () => {
     );
 };
 
-// --- USER: TIKET BANTUAN (VERSI CHAT) ---
-const handleCreateTicket = async (e) => {
+// --- USER: TIKET BANTUAN (DENGAN AUTO REPLY) ---
+const TicketView = ({ userId }) => {
+    const [tickets, setTickets] = useState([]);
+    const [selectedTicket, setSelectedTicket] = useState(null);
+    const [replies, setReplies] = useState([]);
+    const [newReply, setNewReply] = useState('');
+    const [subject, setSubject] = useState('');
+    const [message, setMessage] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => { fetchTickets(); }, [userId]);
+    const fetchTickets = async () => { const { data } = await supabase.from('tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false }); if (data) setTickets(data); };
+    const fetchReplies = async (ticketId) => { const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true }); if (data) setReplies(data); };
+    
+    const handleSelectTicket = (ticket) => { 
+        setSelectedTicket(ticket); 
+        fetchReplies(ticket.id); 
+        setIsCreating(false); 
+    };
+
+    const handleCreateTicket = async (e) => {
         e.preventDefault();
         setLoading(true);
         const toastId = toast.loading("Membuat tiket...");
         try {
-            // 1. Buat Tiket Baru & Ambil Data Balikannya (terutama ID)
+            // 1. Buat Tiket
             const { data: newTicket, error } = await supabase
                 .from('tickets')
                 .insert([{ user_id: userId, subject, message, status: 'Open' }])
                 .select()
-                .single(); // Penting: gunakan .select().single() agar kita dapat ID tiketnya
+                .single();
 
             if (error) throw error;
 
-            // 2. PESAN AUTO REPLY (BOT)
-            // Masukkan pesan otomatis ke tabel balasan
-            const autoReplyMsg = "Halo! 👋\nTerima kasih telah menghubungi kami.\n\nAdmin kami sedang mengecek laporan Anda. Mohon tunggu sebentar, kami akan segera membalasnya. Terima kasih! 🙏";
-
-            await supabase.from('ticket_replies').insert([
-                { 
-                    ticket_id: newTicket.id, 
-                    sender_role: 'admin', // Kita set sebagai 'admin' agar muncul di kiri
-                    message: autoReplyMsg 
-                }
-            ]);
+            // 2. AUTO REPLY (FITUR BARU)
+            const autoReplyMsg = "Halo! 👋\nTerima kasih telah menghubungi kami.\n\nAdmin sedang mengecek laporan Anda. Mohon tunggu sebentar, kami akan segera membalasnya. Terima kasih! 🙏";
+            await supabase.from('ticket_replies').insert([{ ticket_id: newTicket.id, sender_role: 'admin', message: autoReplyMsg }]);
 
             toast.success("Tiket dibuat! Cek balasan otomatis.", { id: toastId });
-            
-            // 3. Reset Form & Refresh
-            setSubject(''); 
-            setMessage(''); 
-            setIsCreating(false); 
-            fetchTickets();
-            
-            // Opsional: Langsung buka tiketnya agar user lihat auto reply
-            handleSelectTicket(newTicket);
-
-        } catch (err) { 
-            console.error(err);
-            toast.error("Gagal membuat tiket", { id: toastId }); 
-        }
+            setSubject(''); setMessage(''); setIsCreating(false); fetchTickets();
+            handleSelectTicket(newTicket); // Langsung buka chat
+        } catch (err) { toast.error("Gagal", { id: toastId }); }
         setLoading(false);
     };
-// --- ADMIN: KELOLA TIKET (VERSI CHAT) ---
+
+    const handleSendReply = async (e) => { e.preventDefault(); if (!newReply.trim()) return; await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]); await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id); setNewReply(''); fetchReplies(selectedTicket.id); };
+    const handleCloseTicket = async () => { if(!confirm("Yakin ingin menutup tiket ini?")) return; await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id); toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null); };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[500px]">
+            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div></div>
+            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
+                {isCreating ? (<div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>) : selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-end"><div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p><div className="whitespace-pre-line">{r.message}</div><p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>)}
+            </div>
+        </div>
+    );
+};
+
+// --- ADMIN: KELOLA TIKET ---
 const AdminTicketView = () => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -313,7 +308,7 @@ const AdminTicketView = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[600px]">
             <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p><p className="text-slate-500 text-[10px] truncate">{t.message}</p></div>))}</div></div>
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
-                {selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-start"><div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>)}
+                {selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-start"><div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p><div className="whitespace-pre-line">{r.message}</div><p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>)}
             </div>
         </div>
     );
@@ -362,7 +357,6 @@ const DashboardView = ({ profile, onNavigate }) => {
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* ... (Bagian Saldo & Status Akun Tidak Berubah) ... */}
         <div className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl p-6 md:p-8 border border-indigo-500/30 shadow-lg bg-gradient-to-br from-indigo-900/40 to-slate-900/40">
             <div className="absolute top-0 right-0 p-3 opacity-10"><CreditCard size={120}/></div>
             <p className="text-indigo-200 font-medium mb-1 text-sm md:text-base">Saldo Tersedia</p>
@@ -378,17 +372,13 @@ const DashboardView = ({ profile, onNavigate }) => {
           </div>
         </div>
       </div>
-
       <div>
         <h3 className="text-lg md:text-xl font-bold text-white mb-4 md:mb-6 flex items-center gap-2"><div className="w-1 h-6 bg-indigo-500 rounded-full"></div> Pintasan Layanan</h3>
-        
-        {/* UPDATE: onNavigate sekarang mengirim kata kunci layanan */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <ServiceCard onClick={() => onNavigate('order', 'Instagram')} icon={<Instagram />} label="Instagram" desc="Followers & Likes" color="from-pink-500 to-rose-500" iconColor="text-pink-100" />
           <ServiceCard onClick={() => onNavigate('order', 'TikTok')} icon={<Music />} label="TikTok" desc="Views & Followers" color="from-cyan-500 to-blue-500" iconColor="text-cyan-100" />
           <ServiceCard onClick={() => onNavigate('order', 'Youtube')} icon={<Youtube />} label="Youtube" desc="Subs & Watchtime" color="from-red-500 to-orange-500" iconColor="text-red-100" />
           <ServiceCard onClick={() => onNavigate('order', 'Facebook')} icon={<Facebook />} label="Facebook" desc="Likes & Followers" color="from-blue-600 to-indigo-600" iconColor="text-blue-100" />
-          
           <ServiceCard onClick={() => onNavigate('order', 'WhatsApp')} icon={<MessageCircle />} label="WhatsApp" desc="Spam Chat & Services" color="from-green-500 to-emerald-600" iconColor="text-green-100" />
           <ServiceCard onClick={() => onNavigate('order', 'Twitter')} icon={<Twitter />} label="Twitter / X" desc="Followers & Retweet" color="from-slate-700 to-black" iconColor="text-slate-200" />
         </div>
@@ -397,17 +387,14 @@ const DashboardView = ({ profile, onNavigate }) => {
   );
 };
 
-// Tambahkan prop 'prefillSearch'
 const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }) => {
   const [selectedCatId, setSelectedCatId] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [target, setTarget] = useState('');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
-  // Inisialisasi searchTerm dengan prefillSearch jika ada
   const [searchTerm, setSearchTerm] = useState(prefillSearch || '');
 
-  // Efek: Jika prefillSearch berubah (misal user klik shortcut baru), update searchTerm & reset pilihan
   useEffect(() => {
       if (prefillSearch) {
           setSearchTerm(prefillSearch);
@@ -423,7 +410,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }
   };
 
   const validServices = Array.isArray(services) ? services : [];
-  // ... (Sisa kode logika filter services, categories, dll TETAP SAMA, tidak perlu diubah) ...
   const catIdKeys = ['category_id', 'cat_id', 'group_id'];
   const catNameKeys = ['category', 'kategori', 'category_name'];
   const srvIdKeys = ['id', 'service', 'num'];
@@ -482,7 +468,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }
            <div className="relative">
               <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
               <div className="relative">
-                  {/* Input Search otomatis terisi dari state searchTerm */}
                   <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
                     onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
                   />
@@ -492,7 +477,6 @@ const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="md:col-span-2">
-                  {/* Label berubah jika ada filter */}
                   <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
                   <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
                       <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
@@ -984,11 +968,18 @@ const App = () => {
 
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>SosmedKu</span>
+             
+             {/* --- LOGO GAMBAR --- */}
+             <img 
+                src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" // Ganti dengan Link Logo Kamu
+                alt="Logo SosmedKu" 
+                className="h-10 w-auto object-contain" 
+             />
+             {/* ------------------- */}
+
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-             {/* UPDATE: Gunakan handleNavigate, bukan setActivePage */}
              <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => handleNavigate('dashboard')} />
              <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => handleNavigate('order')} />
              <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => handleNavigate('history')} />
@@ -1022,7 +1013,6 @@ const App = () => {
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
-             {/* UPDATE: Passing onNavigate ke Dashboard dan prefillSearch ke OrderView */}
              {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={handleNavigate} />}
              {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} prefillSearch={orderSearchPrefill} />}
              
