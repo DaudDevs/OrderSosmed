@@ -252,34 +252,49 @@ const AdminAnnouncementView = () => {
 };
 
 // --- USER: TIKET BANTUAN (VERSI CHAT) ---
-const TicketView = ({ userId }) => {
-    const [tickets, setTickets] = useState([]);
-    const [selectedTicket, setSelectedTicket] = useState(null);
-    const [replies, setReplies] = useState([]);
-    const [newReply, setNewReply] = useState('');
-    const [subject, setSubject] = useState('');
-    const [message, setMessage] = useState('');
-    const [isCreating, setIsCreating] = useState(false);
-    const [loading, setLoading] = useState(false);
+const handleCreateTicket = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        const toastId = toast.loading("Membuat tiket...");
+        try {
+            // 1. Buat Tiket Baru & Ambil Data Balikannya (terutama ID)
+            const { data: newTicket, error } = await supabase
+                .from('tickets')
+                .insert([{ user_id: userId, subject, message, status: 'Open' }])
+                .select()
+                .single(); // Penting: gunakan .select().single() agar kita dapat ID tiketnya
 
-    useEffect(() => { fetchTickets(); }, [userId]);
-    const fetchTickets = async () => { const { data } = await supabase.from('tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false }); if (data) setTickets(data); };
-    const fetchReplies = async (ticketId) => { const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true }); if (data) setReplies(data); };
-    const handleSelectTicket = (ticket) => { setSelectedTicket(ticket); fetchReplies(ticket.id); setIsCreating(false); };
-    const handleCreateTicket = async (e) => { e.preventDefault(); setLoading(true); const toastId = toast.loading("Membuat tiket..."); try { const { error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message, status: 'Open' }]); if (error) throw error; toast.success("Tiket dibuat!", { id: toastId }); setSubject(''); setMessage(''); setIsCreating(false); fetchTickets(); } catch (err) { toast.error("Gagal", { id: toastId }); } setLoading(false); };
-    const handleSendReply = async (e) => { e.preventDefault(); if (!newReply.trim()) return; await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]); await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id); setNewReply(''); fetchReplies(selectedTicket.id); };
-    const handleCloseTicket = async () => { if(!confirm("Yakin ingin menutup tiket ini?")) return; await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id); toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null); };
+            if (error) throw error;
 
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[500px]">
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div></div>
-            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
-                {isCreating ? (<div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>) : selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-end"><div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p>{r.message}<p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>)}
-            </div>
-        </div>
-    );
-};
+            // 2. PESAN AUTO REPLY (BOT)
+            // Masukkan pesan otomatis ke tabel balasan
+            const autoReplyMsg = "Halo! 👋\nTerima kasih telah menghubungi kami.\n\nAdmin kami sedang mengecek laporan Anda. Mohon tunggu sebentar, kami akan segera membalasnya. Terima kasih! 🙏";
 
+            await supabase.from('ticket_replies').insert([
+                { 
+                    ticket_id: newTicket.id, 
+                    sender_role: 'admin', // Kita set sebagai 'admin' agar muncul di kiri
+                    message: autoReplyMsg 
+                }
+            ]);
+
+            toast.success("Tiket dibuat! Cek balasan otomatis.", { id: toastId });
+            
+            // 3. Reset Form & Refresh
+            setSubject(''); 
+            setMessage(''); 
+            setIsCreating(false); 
+            fetchTickets();
+            
+            // Opsional: Langsung buka tiketnya agar user lihat auto reply
+            handleSelectTicket(newTicket);
+
+        } catch (err) { 
+            console.error(err);
+            toast.error("Gagal membuat tiket", { id: toastId }); 
+        }
+        setLoading(false);
+    };
 // --- ADMIN: KELOLA TIKET (VERSI CHAT) ---
 const AdminTicketView = () => {
     const [tickets, setTickets] = useState([]);
