@@ -850,10 +850,32 @@ const App = () => {
 
   const handleCheckStatus = async (order, toastId = null, silent = false) => {
       try {
+          // --- PENGAMAN 1: Validasi Provider ID ---
           const pId = order.provider_id;
           if (!pId || pId === 'undefined' || pId === 'null') return false;
 
+          // --- PENGAMAN 2 (FIX BUG REFUND): Cek Status Terbaru dari Database Dulu! ---
+          // Jangan percaya data dari browser, ambil langsung dari "Brankas" (Database)
+          const { data: latestOrder, error: fetchError } = await supabase
+              .from('user_orders')
+              .select('status')
+              .eq('id', order.id)
+              .single();
+
+          if (fetchError || !latestOrder) {
+              if (!silent) toast.error("Gagal verifikasi data order.", { id: toastId });
+              return false;
+          }
+
+          // KUNCI UTAMA: Jika di database sudah ada kata "Refund", BERHENTI!
+          if (String(latestOrder.status).toLowerCase().includes('refund')) {
+              if (!silent) toast.success("Order ini sudah di-refund sebelumnya.", { id: toastId });
+              return true; // Anggap sukses update (karena memang sudah update)
+          }
+
+          // --- PANGGIL API PUSAT ---
           const res = await callApi('status', { id: pId, action: 'status' });
+          
           if (res.data.status === true || res.data.response === true) {
               const newData = res.data.data;
               if (!newData) throw new Error("Data kosong");
@@ -862,39 +884,61 @@ const App = () => {
               let newStatus = newData.status;
               let refundAmount = 0;
 
-              if (['error', 'canceled', 'partial'].includes(statusLower) && order.status !== 'Refunded') {
+              // --- LOGIKA AUTO REFUND ---
+              // Kita cek lagi: Pastikan status di DB BUKAN Refunded sebelum memproses uang
+              if (['error', 'canceled', 'partial'].includes(statusLower) && !String(latestOrder.status).toLowerCase().includes('refund')) {
+                  
                   const pricePerItem = order.price / order.quantity;
                   let itemsFailed = statusLower === 'partial' ? (parseInt(newData.remains) || 0) : order.quantity;
                   refundAmount = Math.floor(itemsFailed * pricePerItem);
 
                   if (refundAmount > 0) {
+                      // 1. Ambil Saldo User Terbaru (Penting agar tidak race condition)
                       const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
                       const currentBalance = userData?.balance || 0;
+                      
+                      // 2. Kembalikan Saldo
                       await supabase.from('profiles').update({ balance: currentBalance + refundAmount }).eq('id', order.user_id);
+                      
+                      // 3. Ubah status jadi Refunded
                       newStatus = `Refunded (${formatRupiah(refundAmount)})`;
+                      
                       if (!silent) toast.success(`Auto Refund: ${formatRupiah(refundAmount)}`, { id: toastId });
                   }
               }
 
+              // Update Database
               await supabase.from('user_orders').update({ 
-                  status: newStatus, start_count: newData.start_count, remains: newData.remains 
+                  status: newStatus, 
+                  start_count: newData.start_count, 
+                  remains: newData.remains 
               }).eq('id', order.id);
 
               if (!silent && !refundAmount) toast.success(`Status: ${newData.status}`, { id: toastId });
               return true; 
           } else {
+              // Handle Error "Not Found" dari Pusat (Order Hilang)
               const errorMsg = res.data.data?.msg || "";
-              if (String(errorMsg).toLowerCase().includes('not found') && order.status !== 'Refunded') {
+              
+              // Cek lagi status DB sebelum refund "Not Found"
+              if (String(errorMsg).toLowerCase().includes('not found') && !String(latestOrder.status).toLowerCase().includes('refund')) {
+                  
                   const { data: userData } = await supabase.from('profiles').select('balance').eq('id', order.user_id).single();
                   const refund = order.price;
+                  
                   await supabase.from('profiles').update({ balance: (userData?.balance || 0) + refund }).eq('id', order.user_id);
                   await supabase.from('user_orders').update({ status: `Refunded (Not Found)` }).eq('id', order.id);
+                  
                   if (!silent) toast.error(`Order Hilang -> Auto Refund ${formatRupiah(refund)}`, { id: toastId });
                   return true;
               }
               return false;
           }
-      } catch (err) { if(!silent && toastId) toast.error("Koneksi Error", { id: toastId }); return false; }
+      } catch (err) { 
+          console.error(err);
+          if(!silent && toastId) toast.error("Koneksi Error", { id: toastId }); 
+          return false; 
+      }
   };
 
   const handleRefill = async (order, toastId) => {
