@@ -67,7 +67,7 @@ const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
   );
 };
 
-// --- MODAL INFO POPUP (TIMELINE STYLE + KLIK LINK) ---
+// --- MODAL INFO POPUP ---
 const InfoModal = ({ isOpen, onClose }) => {
     const [infos, setInfos] = useState([]);
 
@@ -81,16 +81,11 @@ const InfoModal = ({ isOpen, onClose }) => {
         }
     }, [isOpen]);
 
-    // Fungsi pintar untuk mengubah teks URL menjadi Link Aktif
     const renderWithLinks = (text) => {
         const parts = text.split(/(https?:\/\/[^\s]+)/g);
         return parts.map((part, i) => {
             if (part.match(/https?:\/\/[^\s]+/)) {
-                return (
-                    <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 font-bold hover:underline break-all">
-                        {part}
-                    </a>
-                );
+                return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 font-bold hover:underline break-all">{part}</a>;
             }
             return part;
         });
@@ -102,41 +97,27 @@ const InfoModal = ({ isOpen, onClose }) => {
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-scale-up">
                 <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-                        <Bell className="text-indigo-600" size={20}/> Informasi Terbaru
-                    </h3>
+                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg"><Bell className="text-indigo-600" size={20}/> Informasi Terbaru</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors"><X size={24}/></button>
                 </div>
                 <div className="p-0 max-h-[60vh] overflow-y-auto bg-slate-50">
-                    {infos.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400 text-sm">Belum ada informasi terbaru.</div>
-                    ) : (
+                    {infos.length === 0 ? (<div className="p-8 text-center text-slate-400 text-sm">Belum ada informasi terbaru.</div>) : (
                         <div className="divide-y divide-slate-200">
                             {infos.map((info) => (
                                 <div key={info.id} className="p-5 hover:bg-white transition-colors">
                                     <div className="flex items-center gap-2 mb-2">
-                                        {info.type === 'Layanan' ? (
-                                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1 border border-green-200"><RefreshCw size={10}/> Layanan</span>
-                                        ) : (
-                                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 border border-blue-200"><Info size={10}/> Informasi</span>
-                                        )}
-                                        <span className="text-[10px] text-slate-400">
-                                            {new Date(info.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}
-                                        </span>
+                                        {info.type === 'Layanan' ? (<span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1 border border-green-200"><RefreshCw size={10}/> Layanan</span>) : (<span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 border border-blue-200"><Info size={10}/> Informasi</span>)}
+                                        <span className="text-[10px] text-slate-400">{new Date(info.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}</span>
                                     </div>
                                     <h4 className="font-bold text-slate-800 text-sm mb-1 uppercase tracking-wide">{info.title}</h4>
-                                    <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                                        {renderWithLinks(info.content)}
-                                    </div>
+                                    <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">{renderWithLinks(info.content)}</div>
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
                 <div className="p-4 border-t bg-white">
-                    <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                        <CheckCircle2 size={18}/> Saya Sudah Membaca
-                    </button>
+                    <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"><CheckCircle2 size={18}/> Saya Sudah Membaca</button>
                 </div>
             </div>
         </div>
@@ -144,94 +125,38 @@ const InfoModal = ({ isOpen, onClose }) => {
 };
 
 // ==========================================
-// 3. PAGE COMPONENTS (USER & ADMIN)
+// 3. PAGE COMPONENTS
 // ==========================================
 
-// --- ADMIN: KELOLA PENGUMUMAN ---
 const AdminAnnouncementView = () => {
     const [list, setList] = useState([]);
     const [formData, setFormData] = useState({ title: '', content: '', type: 'Layanan' });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => { fetchAnnouncements(); }, []);
-
-    const fetchAnnouncements = async () => {
-        const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
-        if (data) setList(data);
-    };
-
-    const handleAdd = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        const { error } = await supabase.from('announcements').insert([formData]);
-        if (!error) {
-            toast.success("Info berhasil diposting!");
-            setFormData({ title: '', content: '', type: 'Layanan' });
-            fetchAnnouncements();
-        } else {
-            toast.error("Gagal: " + error.message);
-        }
-        setLoading(false);
-    };
-
-    const handleDelete = async (id) => {
-        if(!confirm("Hapus info ini?")) return;
-        await supabase.from('announcements').delete().eq('id', id);
-        fetchAnnouncements();
-        toast.success("Info dihapus");
-    };
+    const fetchAnnouncements = async () => { const { data } = await supabase.from('announcements').select('*').order('created_at', { ascending: false }); if (data) setList(data); };
+    const handleAdd = async (e) => { e.preventDefault(); setLoading(true); const { error } = await supabase.from('announcements').insert([formData]); if (!error) { toast.success("Info berhasil diposting!"); setFormData({ title: '', content: '', type: 'Layanan' }); fetchAnnouncements(); } else { toast.error("Gagal: " + error.message); } setLoading(false); };
+    const handleDelete = async (id) => { if(!confirm("Hapus info ini?")) return; await supabase.from('announcements').delete().eq('id', id); fetchAnnouncements(); toast.success("Info dihapus"); };
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
             <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-yellow-400"/> Tambah Info</h3>
                 <form onSubmit={handleAdd} className="space-y-4">
-                    <div>
-                        <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Kategori</label>
-                        <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
-                            <option value="Layanan">🟢 Update Layanan</option>
-                            <option value="Informasi">🔵 Informasi Umum</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Judul</label>
-                        <input type="text" placeholder="Contoh: LAYANAN TIKTOK MURAH" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
-                    </div>
-                    <div>
-                        <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Isi Pesan</label>
-                        <textarea rows="5" placeholder="Detail informasi..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} required></textarea>
-                    </div>
-                    <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95">
-                        {loading ? <Loader2 className="animate-spin mx-auto"/> : 'Posting Sekarang'}
-                    </button>
+                    <div><label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Kategori</label><select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}><option value="Layanan">🟢 Update Layanan</option><option value="Informasi">🔵 Informasi Umum</option></select></div>
+                    <div><label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Judul</label><input type="text" placeholder="Contoh: LAYANAN TIKTOK MURAH" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required /></div>
+                    <div><label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Isi Pesan</label><textarea rows="5" placeholder="Detail informasi..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} required></textarea></div>
+                    <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Posting Sekarang'}</button>
                 </form>
             </div>
             <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2"><ListOrdered className="text-indigo-400"/> Riwayat Pengumuman</h3>
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                    {list.map(item => (
-                        <div key={item.id} className="bg-[#0f172a] p-4 rounded-xl border border-slate-700 flex justify-between items-start gap-4 hover:border-slate-500 transition-all">
-                            <div>
-                                <div className="flex gap-2 mb-2">
-                                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${item.type === 'Layanan' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{item.type}</span>
-                                    <span className="text-[10px] text-slate-500 flex items-center">{new Date(item.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <h4 className="text-white font-bold text-sm mb-1">{item.title}</h4>
-                                <p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">{item.content}</p>
-                            </div>
-                            <button onClick={() => handleDelete(item.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500 hover:text-white border border-red-500/20 transition-all flex-shrink-0">
-                                <Trash2 size={16}/>
-                            </button>
-                        </div>
-                    ))}
-                    {list.length === 0 && <div className="text-center text-slate-500 py-10 text-sm">Belum ada pengumuman yang dibuat.</div>}
-                </div>
+                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">{list.map(item => (<div key={item.id} className="bg-[#0f172a] p-4 rounded-xl border border-slate-700 flex justify-between items-start gap-4 hover:border-slate-500 transition-all"><div><div className="flex gap-2 mb-2"><span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${item.type === 'Layanan' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{item.type}</span><span className="text-[10px] text-slate-500 flex items-center">{new Date(item.created_at).toLocaleDateString()}</span></div><h4 className="text-white font-bold text-sm mb-1">{item.title}</h4><p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">{item.content}</p></div><button onClick={() => handleDelete(item.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500 hover:text-white border border-red-500/20 transition-all flex-shrink-0"><Trash2 size={16}/></button></div>))}</div>
             </div>
         </div>
     );
 };
 
-// --- USER: TIKET BANTUAN (DENGAN AUTO REPLY) ---
 const TicketView = ({ userId }) => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -245,38 +170,8 @@ const TicketView = ({ userId }) => {
     useEffect(() => { fetchTickets(); }, [userId]);
     const fetchTickets = async () => { const { data } = await supabase.from('tickets').select('*').eq('user_id', userId).order('created_at', { ascending: false }); if (data) setTickets(data); };
     const fetchReplies = async (ticketId) => { const { data } = await supabase.from('ticket_replies').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true }); if (data) setReplies(data); };
-    
-    const handleSelectTicket = (ticket) => { 
-        setSelectedTicket(ticket); 
-        fetchReplies(ticket.id); 
-        setIsCreating(false); 
-    };
-
-    const handleCreateTicket = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        const toastId = toast.loading("Membuat tiket...");
-        try {
-            // 1. Buat Tiket
-            const { data: newTicket, error } = await supabase
-                .from('tickets')
-                .insert([{ user_id: userId, subject, message, status: 'Open' }])
-                .select()
-                .single();
-
-            if (error) throw error;
-
-            // 2. AUTO REPLY (FITUR BARU)
-            const autoReplyMsg = "Halo! 👋\nTerima kasih telah menghubungi kami.\n\nAdmin sedang mengecek laporan Anda. Mohon tunggu sebentar, kami akan segera membalasnya. Terima kasih! 🙏";
-            await supabase.from('ticket_replies').insert([{ ticket_id: newTicket.id, sender_role: 'admin', message: autoReplyMsg }]);
-
-            toast.success("Tiket dibuat! Cek balasan otomatis.", { id: toastId });
-            setSubject(''); setMessage(''); setIsCreating(false); fetchTickets();
-            handleSelectTicket(newTicket); // Langsung buka chat
-        } catch (err) { toast.error("Gagal", { id: toastId }); }
-        setLoading(false);
-    };
-
+    const handleSelectTicket = (ticket) => { setSelectedTicket(ticket); fetchReplies(ticket.id); setIsCreating(false); };
+    const handleCreateTicket = async (e) => { e.preventDefault(); setLoading(true); const toastId = toast.loading("Membuat tiket..."); try { const { data: newTicket, error } = await supabase.from('tickets').insert([{ user_id: userId, subject, message, status: 'Open' }]).select().single(); if (error) throw error; const autoReplyMsg = "Halo! 👋\nTerima kasih telah menghubungi kami.\n\nAdmin sedang mengecek laporan Anda. Mohon tunggu sebentar, kami akan segera membalasnya. Terima kasih! 🙏"; await supabase.from('ticket_replies').insert([{ ticket_id: newTicket.id, sender_role: 'admin', message: autoReplyMsg }]); toast.success("Tiket dibuat! Cek balasan otomatis.", { id: toastId }); setSubject(''); setMessage(''); setIsCreating(false); fetchTickets(); handleSelectTicket(newTicket); } catch (err) { toast.error("Gagal", { id: toastId }); } setLoading(false); };
     const handleSendReply = async (e) => { e.preventDefault(); if (!newReply.trim()) return; await supabase.from('ticket_replies').insert([{ ticket_id: selectedTicket.id, sender_role: 'user', message: newReply }]); await supabase.from('tickets').update({ status: 'Open' }).eq('id', selectedTicket.id); setNewReply(''); fetchReplies(selectedTicket.id); };
     const handleCloseTicket = async () => { if(!confirm("Yakin ingin menutup tiket ini?")) return; await supabase.from('tickets').update({ status: 'Closed' }).eq('id', selectedTicket.id); toast.success("Tiket Ditutup"); fetchTickets(); setSelectedTicket(null); };
 
@@ -290,7 +185,6 @@ const TicketView = ({ userId }) => {
     );
 };
 
-// --- ADMIN: KELOLA TIKET ---
 const AdminTicketView = () => {
     const [tickets, setTickets] = useState([]);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -314,7 +208,6 @@ const AdminTicketView = () => {
     );
 };
 
-// --- HALAMAN ADMIN: ISI SALDO & KELOLA USER ---
 const AdminSaldoView = () => {
   const [targetUsername, setTargetUsername] = useState('');
   const [amount, setAmount] = useState('');
@@ -334,7 +227,6 @@ const AdminSaldoView = () => {
   );
 };
 
-// --- HALAMAN ADMIN: MONITORING ORDER ---
 const AdminOrderView = ({ onCheckStatus }) => {
     const [orders, setOrders] = useState([]);
     const [search, setSearch] = useState('');
@@ -739,6 +631,7 @@ const App = () => {
   const [services, setServices] = useState([]);
   const [activePage, setActivePage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false); 
+  // State untuk popup/modal info
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   
   // STATE BARU: Untuk menyimpan kata kunci pencarian otomatis
@@ -968,10 +861,19 @@ const App = () => {
 
        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>SosmedKu</span>
+             
+             {/* --- LOGO GAMBAR --- */}
+             <img 
+                src="https://nmgtscdialmxgktwaocn.supabase.co/storage/v1/object/public/QR%20code/WhatsApp%20Image%202026-01-04%20at%2018.59.39%20(1).jpeg" // Ganti dengan Link Logo Kamu
+                alt="Logo SosmedKu" 
+                className="h-10 w-auto object-contain" 
+             />
+             {/* ------------------- */}
+
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
+             {/* UPDATE: Gunakan handleNavigate, bukan setActivePage */}
              <MenuItem icon={<LayoutDashboard/>} label="Dashboard" isActive={activePage === 'dashboard'} onClick={() => handleNavigate('dashboard')} />
              <MenuItem icon={<ShoppingCart/>} label="Order Baru" isActive={activePage === 'order'} onClick={() => handleNavigate('order')} />
              <MenuItem icon={<History/>} label="Riwayat" isActive={activePage === 'history'} onClick={() => handleNavigate('history')} />
@@ -1005,6 +907,7 @@ const App = () => {
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
+             {/* UPDATE: Passing onNavigate ke Dashboard dan prefillSearch ke OrderView */}
              {activePage === 'dashboard' && <DashboardView profile={profile || {}} onNavigate={handleNavigate} />}
              {activePage === 'order' && <OrderView services={services} balance={profile?.balance || 0} onOrder={handlePlaceOrder} refreshProfile={() => fetchUserProfile(session.user.id)} prefillSearch={orderSearchPrefill} />}
              
