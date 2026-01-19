@@ -20,7 +20,7 @@ const LOCAL_CREDENTIALS = {
   secret_key: '22300223' 
 };
 
-const CONFIG = { PROFIT_PERCENTAGE: 150 }; 
+const CONFIG = { PROFIT_PERCENTAGE: 100 }; 
 const ADMIN_USERNAME = 'DaudHanafi'; 
 
 const formatRupiah = (number) => {
