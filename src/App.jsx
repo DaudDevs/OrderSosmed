@@ -21,7 +21,7 @@ const LOCAL_CREDENTIALS = {
 };
 
 const CONFIG = { PROFIT_PERCENTAGE: 100 }; 
-const ADMIN_USERNAME = 'DaudHanafi'; 
+const ADMIN_USERNAME = 'Admin'; 
 
 const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', {
