@@ -15,7 +15,7 @@ import {
 const IS_LOCAL = import.meta.env.DEV; 
 
 const LOCAL_CREDENTIALS = {
-  api_id: '	57788',  
+  api_id: '57788',  
   api_key: '89c5bc9b8a72a8dc84dba19ed4d128f5346e4bef5a19ee3c52e100e0e814983b', 
   secret_key: 'OrderSosmed' 
 };
