@@ -49,16 +49,16 @@ const callApi = async (endpoint, payload = {}) => {
 // 2. HELPER COMPONENTS
 // ==========================================
 const ServiceCard = ({ icon, label, desc, color, iconColor, onClick }) => (
-  <div onClick={onClick} className="group relative p-4 md:p-6 bg-[#1e293b] border border-slate-700 rounded-2xl cursor-pointer overflow-hidden hover:border-slate-500 hover:-translate-y-1 transition-all">
+  <div onClick={onClick} className="group relative p-4 md:p-6 glass border border-white/10 rounded-2xl cursor-pointer overflow-hidden hover:border-white/30 hover:-translate-y-1 transition-all">
     <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${color} opacity-10 rounded-bl-full`}></div>
     <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-3 md:mb-4 shadow-lg`}>{React.cloneElement(icon, { className: `${iconColor} w-5 h-5 md:w-6 md:h-6` })}</div>
     <h4 className="text-white font-bold text-base md:text-lg mb-0.5">{label}</h4>
-    <p className="text-slate-500 text-[10px] md:text-xs">{desc}</p>
+    <p className="text-slate-400 text-[10px] md:text-xs">{desc}</p>
   </div>
 );
 
 const MenuItem = ({ icon, label, isActive, onClick, variant = 'default' }) => {
-  const activeClass = isActive ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white";
+  const activeClass = isActive ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:bg-white/10 hover:text-white";
   return (
     <div onClick={onClick} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-all ${variant === 'danger' ? 'text-red-400 hover:bg-red-500/10' : activeClass}`}>
       <div>{React.cloneElement(icon, { size: 20 })}</div>
@@ -99,33 +99,33 @@ const InfoModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl relative animate-scale-up">
-                <div className="p-4 border-b flex justify-between items-center bg-white sticky top-0 z-10">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-                        <Bell className="text-indigo-600" size={20}/> Informasi Terbaru
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md animate-fade-in">
+            <div className="glass-strong rounded-3xl w-full max-w-lg overflow-hidden relative animate-scale-up">
+                <div className="p-4 border-b border-white/10 flex justify-between items-center sticky top-0 z-10">
+                    <h3 className="font-bold text-white flex items-center gap-2 text-lg">
+                        <Bell className="text-indigo-400" size={20}/> Informasi Terbaru
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors"><X size={24}/></button>
                 </div>
-                <div className="p-0 max-h-[60vh] overflow-y-auto bg-slate-50">
+                <div className="p-0 max-h-[60vh] overflow-y-auto custom-scrollbar">
                     {infos.length === 0 ? (
                         <div className="p-8 text-center text-slate-400 text-sm">Belum ada informasi terbaru.</div>
                     ) : (
-                        <div className="divide-y divide-slate-200">
+                        <div className="divide-y divide-white/10">
                             {infos.map((info) => (
-                                <div key={info.id} className="p-5 hover:bg-white transition-colors">
+                                <div key={info.id} className="p-5 hover:bg-white/5 transition-colors">
                                     <div className="flex items-center gap-2 mb-2">
                                         {info.type === 'Layanan' ? (
-                                            <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-1 rounded flex items-center gap-1 border border-green-200"><RefreshCw size={10}/> Layanan</span>
+                                            <span className="text-[10px] font-bold text-green-300 bg-green-500/15 px-2 py-1 rounded flex items-center gap-1 border border-green-500/30"><RefreshCw size={10}/> Layanan</span>
                                         ) : (
-                                            <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded flex items-center gap-1 border border-blue-200"><Info size={10}/> Informasi</span>
+                                            <span className="text-[10px] font-bold text-blue-300 bg-blue-500/15 px-2 py-1 rounded flex items-center gap-1 border border-blue-500/30"><Info size={10}/> Informasi</span>
                                         )}
                                         <span className="text-[10px] text-slate-400">
                                             {new Date(info.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' })}
                                         </span>
                                     </div>
-                                    <h4 className="font-bold text-slate-800 text-sm mb-1 uppercase tracking-wide">{info.title}</h4>
-                                    <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                    <h4 className="font-bold text-white text-sm mb-1 uppercase tracking-wide">{info.title}</h4>
+                                    <div className="text-slate-300 text-xs leading-relaxed whitespace-pre-line bg-white/5 p-3 rounded-lg border border-white/10">
                                         {renderWithLinks(info.content)}
                                     </div>
                                 </div>
@@ -133,8 +133,8 @@ const InfoModal = ({ isOpen, onClose }) => {
                         </div>
                     )}
                 </div>
-                <div className="p-4 border-t bg-white">
-                    <button onClick={onClose} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
+                <div className="p-4 border-t border-white/10">
+                    <button onClick={onClose} className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
                         <CheckCircle2 size={18}/> Saya Sudah Membaca
                     </button>
                 </div>
@@ -183,38 +183,38 @@ const AdminAnnouncementView = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl h-fit">
+            <div className="glass border border-white/10 rounded-2xl p-6 shadow-xl h-fit">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Megaphone className="text-yellow-400"/> Tambah Info</h3>
                 <form onSubmit={handleAdd} className="space-y-4">
                     <div>
                         <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Kategori</label>
-                        <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                        <select className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
                             <option value="Layanan">🟢 Update Layanan</option>
                             <option value="Informasi">🔵 Informasi Umum</option>
                         </select>
                     </div>
                     <div>
                         <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Judul</label>
-                        <input type="text" placeholder="Contoh: LAYANAN TIKTOK MURAH" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                        <input type="text" placeholder="Contoh: LAYANAN TIKTOK MURAH" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
                     </div>
                     <div>
                         <label className="text-slate-400 text-xs mb-2 block font-bold uppercase">Isi Pesan</label>
-                        <textarea rows="5" placeholder="Detail informasi..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} required></textarea>
+                        <textarea rows="5" placeholder="Detail informasi..." className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400" value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} required></textarea>
                     </div>
-                    <button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95">
+                    <button disabled={loading} className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-white font-bold py-3 rounded-xl transition-all active:scale-95">
                         {loading ? <Loader2 className="animate-spin mx-auto"/> : 'Posting Sekarang'}
                     </button>
                 </form>
             </div>
-            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
+            <div className="lg:col-span-2 glass border border-white/10 rounded-2xl p-6 shadow-xl">
                 <h3 className="font-bold text-white mb-4 flex items-center gap-2"><ListOrdered className="text-indigo-400"/> Riwayat Pengumuman</h3>
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                     {list.map(item => (
-                        <div key={item.id} className="bg-[#0f172a] p-4 rounded-xl border border-slate-700 flex justify-between items-start gap-4 hover:border-slate-500 transition-all">
+                        <div key={item.id} className="bg-black/20 p-4 rounded-xl border border-white/10 flex justify-between items-start gap-4 hover:border-white/30 transition-all">
                             <div>
                                 <div className="flex gap-2 mb-2">
                                     <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${item.type === 'Layanan' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{item.type}</span>
-                                    <span className="text-[10px] text-slate-500 flex items-center">{new Date(item.created_at).toLocaleDateString()}</span>
+                                    <span className="text-[10px] text-slate-400 flex items-center">{new Date(item.created_at).toLocaleDateString()}</span>
                                 </div>
                                 <h4 className="text-white font-bold text-sm mb-1">{item.title}</h4>
                                 <p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">{item.content}</p>
@@ -224,7 +224,7 @@ const AdminAnnouncementView = () => {
                             </button>
                         </div>
                     ))}
-                    {list.length === 0 && <div className="text-center text-slate-500 py-10 text-sm">Belum ada pengumuman yang dibuat.</div>}
+                    {list.length === 0 && <div className="text-center text-slate-400 py-10 text-sm">Belum ada pengumuman yang dibuat.</div>}
                 </div>
             </div>
         </div>
@@ -282,9 +282,9 @@ const TicketView = ({ userId }) => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[500px]">
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-500">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div></div>
-            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
-                {isCreating ? (<div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-green-600 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>) : selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-end"><div className="bg-indigo-600 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p><div className="whitespace-pre-line">{r.message}</div><p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>)}
+            <div className="glass border border-white/10 rounded-2xl p-4 overflow-y-auto"><button onClick={() => {setIsCreating(true); setSelectedTicket(null)}} className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white font-bold py-2 rounded-xl mb-4 flex items-center justify-center gap-2 text-sm"><LifeBuoy size={16}/> Buat Baru</button><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-white/10 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/15'}`}><div className="flex justify-between mb-1"><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Closed' ? 'bg-red-500/20 text-red-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{t.status}</span><span className="text-[10px] text-slate-400">{new Date(t.created_at).toLocaleDateString()}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p></div>))}</div></div>
+            <div className="lg:col-span-2 glass border border-white/10 rounded-2xl flex flex-col overflow-hidden relative">
+                {isCreating ? (<div className="p-6"><h3 className="font-bold text-white mb-4">Tulis Keluhan</h3><form onSubmit={handleCreateTicket} className="space-y-4"><input className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm" placeholder="Judul Masalah" value={subject} onChange={e => setSubject(e.target.value)} required /><textarea className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm" placeholder="Deskripsi..." rows="5" value={message} onChange={e => setMessage(e.target.value)} required></textarea><button disabled={loading} className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg font-bold text-sm">{loading ? 'Proses...' : 'Kirim Tiket'}</button></form></div>) : selectedTicket ? (<><div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">#{selectedTicket.id} - {selectedTicket.subject}</h4><p className="text-slate-400 text-xs">Status: {selectedTicket.status}</p></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/20"><div className="flex justify-end"><div className="bg-gradient-to-r from-indigo-500 to-violet-500 text-white p-3 rounded-l-xl rounded-tr-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-indigo-200 mb-1">Anda</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'user' ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white rounded-tr-none' : 'bg-white/10 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'user' ? 'text-indigo-200' : 'text-orange-400'}`}>{r.sender_role === 'user' ? 'Anda' : 'Admin Support'}</p><div className="whitespace-pre-line">{r.message}</div><p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-white/10 bg-white/5 flex gap-2"><input className="flex-1 bg-black/20 border border-white/15 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Tulis balasan..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-400 bg-black/30">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-400"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk melihat percakapan</p></div>)}
             </div>
         </div>
     );
@@ -306,9 +306,9 @@ const AdminTicketView = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in h-[600px]">
-            <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-4 overflow-y-auto"><h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-slate-700 border-indigo-500' : 'bg-slate-800/50 border-slate-700 hover:bg-slate-700'}`}><div className="flex justify-between mb-1"><span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p><p className="text-slate-500 text-[10px] truncate">{t.message}</p></div>))}</div></div>
-            <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl flex flex-col overflow-hidden relative">
-                {selectedTicket ? (<><div className="p-4 border-b border-slate-700 bg-slate-800/50 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#0f172a]"><div className="flex justify-start"><div className="bg-slate-700 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-700 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p><div className="whitespace-pre-line">{r.message}</div><p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-slate-700 bg-slate-800/30 flex gap-2"><input className="flex-1 bg-[#0f172a] border border-slate-600 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-500 bg-slate-900">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-500"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>)}
+            <div className="glass border border-white/10 rounded-2xl p-4 overflow-y-auto"><h3 className="font-bold text-white mb-4 text-sm flex items-center gap-2"><ListOrdered size={16}/> Daftar Tiket</h3><div className="space-y-2">{tickets.map(t => (<div key={t.id} onClick={() => handleSelectTicket(t)} className={`p-3 rounded-xl cursor-pointer border ${selectedTicket?.id === t.id ? 'bg-white/10 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/15'}`}><div className="flex justify-between mb-1"><span className="text-[10px] text-purple-300 font-bold">@{t.profiles?.username || 'Unknown'}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${t.status === 'Open' ? 'bg-yellow-500/20 text-yellow-400' : t.status === 'Replied' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.status}</span></div><p className="text-white text-sm font-bold truncate">{t.subject}</p><p className="text-slate-400 text-[10px] truncate">{t.message}</p></div>))}</div></div>
+            <div className="lg:col-span-2 glass border border-white/10 rounded-2xl flex flex-col overflow-hidden relative">
+                {selectedTicket ? (<><div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center"><div><h4 className="font-bold text-white text-sm">@{selectedTicket.profiles?.username} - {selectedTicket.subject}</h4></div>{selectedTicket.status !== 'Closed' && (<button onClick={handleCloseTicket} className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg hover:bg-red-500/40">Tutup Tiket</button>)}</div><div className="flex-1 p-4 overflow-y-auto space-y-4 bg-black/20"><div className="flex justify-start"><div className="bg-white/10 text-slate-200 p-3 rounded-r-xl rounded-tl-xl max-w-[80%] text-sm"><p className="font-bold text-[10px] text-purple-300 mb-1">@{selectedTicket.profiles?.username}</p>{selectedTicket.message}</div></div>{replies.map(r => (<div key={r.id} className={`flex ${r.sender_role === 'admin' ? 'justify-end' : 'justify-start'}`}><div className={`p-3 rounded-xl max-w-[80%] text-sm ${r.sender_role === 'admin' ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white rounded-tr-none' : 'bg-white/10 text-slate-200 rounded-tl-none'}`}><p className={`font-bold text-[10px] mb-1 ${r.sender_role === 'admin' ? 'text-indigo-200' : 'text-purple-300'}`}>{r.sender_role === 'admin' ? 'Anda (Admin)' : 'User'}</p><div className="whitespace-pre-line">{r.message}</div><p className="text-[9px] opacity-50 text-right mt-1">{new Date(r.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p></div></div>))}</div>{selectedTicket.status !== 'Closed' ? (<form onSubmit={handleSendReply} className="p-3 border-t border-white/10 bg-white/5 flex gap-2"><input className="flex-1 bg-black/20 border border-white/15 rounded-lg px-3 py-2 text-white text-sm outline-none" placeholder="Balas user..." value={newReply} onChange={e => setNewReply(e.target.value)} /><button className="bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white p-2 rounded-lg"><Send size={18}/></button></form>) : (<div className="p-3 text-center text-xs text-slate-400 bg-black/30">Tiket telah ditutup.</div>)}</>) : (<div className="flex-1 flex flex-col items-center justify-center text-slate-400"><MessageSquare size={40} className="mb-2 opacity-20"/><p className="text-sm">Pilih tiket untuk membalas</p></div>)}
             </div>
         </div>
     );
@@ -328,8 +328,8 @@ const AdminSaldoView = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
-      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 shadow-xl h-fit"><h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Key className="text-yellow-400"/> Admin: Isi Saldo</h3><form onSubmit={handleTopUp} className="space-y-4"><input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Username Member" value={targetUsername} onChange={e => setTargetUsername(e.target.value)} required /><input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Nominal" value={amount} onChange={e => setAmount(e.target.value)} required /><button disabled={loading} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl mt-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Kirim Saldo'}</button></form></div>
-      <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-6 overflow-hidden shadow-xl"><h3 className="font-bold text-white mb-4 text-lg">Kelola Member ({users.length})</h3><div className="overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0"><table className="w-full text-sm text-left text-slate-300 min-w-[300px]"><thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Saldo</th><th className="px-3 py-2 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-slate-700/50">{users.map(u => (<tr key={u.id} className="hover:bg-slate-800/30"><td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td><td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td><td className="px-3 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:bg-indigo-500/40">Pilih</button>{u.username !== ADMIN_USERNAME && (<button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40"><Trash2 size={14}/></button>)}</div></td></tr>))}</tbody></table></div></div>
+      <div className="glass border border-white/10 rounded-2xl p-5 md:p-6 shadow-xl h-fit"><h3 className="font-bold text-white mb-6 flex items-center gap-2 text-lg"><Key className="text-yellow-400"/> Admin: Isi Saldo</h3><form onSubmit={handleTopUp} className="space-y-4"><input type="text" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Username Member" value={targetUsername} onChange={e => setTargetUsername(e.target.value)} required /><input type="number" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Nominal" value={amount} onChange={e => setAmount(e.target.value)} required /><button disabled={loading} className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-white font-bold py-3.5 rounded-xl mt-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : 'Kirim Saldo'}</button></form></div>
+      <div className="glass border border-white/10 rounded-2xl p-5 md:p-6 overflow-hidden shadow-xl"><h3 className="font-bold text-white mb-4 text-lg">Kelola Member ({users.length})</h3><div className="overflow-x-auto -mx-5 px-5 md:mx-0 md:px-0"><table className="w-full text-sm text-left text-slate-300 min-w-[300px]"><thead className="bg-white/10 text-slate-400 uppercase text-[10px] md:text-xs"><tr><th className="px-3 py-2">User</th><th className="px-3 py-2">Saldo</th><th className="px-3 py-2 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-white/10/50">{users.map(u => (<tr key={u.id} className="hover:bg-white/5"><td className="px-3 py-3 font-bold text-white text-xs md:text-sm">{u.username}</td><td className="px-3 py-3 text-green-400 text-xs md:text-sm">{formatRupiah(u.balance)}</td><td className="px-3 py-3 text-right"><div className="flex justify-end gap-2"><button onClick={() => setTargetUsername(u.username)} className="text-[10px] bg-indigo-500/20 text-indigo-400 px-3 py-1.5 rounded-lg hover:brightness-110/40">Pilih</button>{u.username !== ADMIN_USERNAME && (<button onClick={() => handleDeleteUser(u.id, u.username)} className="text-[10px] bg-red-500/20 text-red-400 px-2 py-1.5 rounded-lg hover:bg-red-500/40"><Trash2 size={14}/></button>)}</div></td></tr>))}</tbody></table></div></div>
     </div>
   );
 };
@@ -346,9 +346,9 @@ const AdminOrderView = ({ onCheckStatus }) => {
     const filteredOrders = orders.filter(o => String(o.provider_id).includes(search) || String(o.target).toLowerCase().includes(search.toLowerCase()) || String(o.profiles?.username).toLowerCase().includes(search.toLowerCase()) );
 
     return (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4"><h3 className="font-bold text-white text-lg flex items-center gap-2"><ListOrdered className="text-purple-400"/> Monitoring Order</h3><div className="relative w-full md:w-64"><input type="text" placeholder="Cari ID / User / Target..." className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-purple-500 outline-none" value={search} onChange={e => setSearch(e.target.value)} /><Search className="absolute left-3 top-2.5 text-slate-500 w-4 h-4" /></div></div>
-            <div className="overflow-x-auto"><table className="w-full text-sm text-left text-slate-300 min-w-[800px]"><thead className="bg-slate-800 text-slate-400 uppercase text-[10px]"><tr><th className="px-4 py-3">ID / User</th><th className="px-4 py-3">Layanan</th><th className="px-4 py-3">Target</th><th className="px-4 py-3">Harga/Modal</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-center">Cek</th></tr></thead><tbody className="divide-y divide-slate-700/50">{filteredOrders.map(o => (<tr key={o.id} className="hover:bg-slate-800/30"><td className="px-4 py-3"><div className="font-bold text-white">#{o.provider_id}</div><div className="text-[10px] text-purple-400">@{o.profiles?.username || 'Unknown'}</div><div className="text-[10px] text-slate-500">{new Date(o.created_at).toLocaleDateString()}</div></td><td className="px-4 py-3 text-xs max-w-[200px] truncate">{o.service_name}</td><td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td><td className="px-4 py-3"><div className="text-green-400 font-bold">{formatRupiah(o.price)}</div><div className="text-[10px] text-slate-500">Modal: {formatRupiah(o.modal)}</div></td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span></td><td className="px-4 py-3 text-center"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}</button></td></tr>))}</tbody></table></div>
+        <div className="glass border border-white/10 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
+            <div className="p-5 md:p-6 border-b border-white/10 flex flex-col md:flex-row justify-between items-center gap-4"><h3 className="font-bold text-white text-lg flex items-center gap-2"><ListOrdered className="text-purple-400"/> Monitoring Order</h3><div className="relative w-full md:w-64"><input type="text" placeholder="Cari ID / User / Target..." className="w-full bg-black/20 border border-white/15 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:ring-1 focus:ring-purple-500 outline-none" value={search} onChange={e => setSearch(e.target.value)} /><Search className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" /></div></div>
+            <div className="overflow-x-auto"><table className="w-full text-sm text-left text-slate-300 min-w-[800px]"><thead className="bg-white/10 text-slate-400 uppercase text-[10px]"><tr><th className="px-4 py-3">ID / User</th><th className="px-4 py-3">Layanan</th><th className="px-4 py-3">Target</th><th className="px-4 py-3">Harga/Modal</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-center">Cek</th></tr></thead><tbody className="divide-y divide-white/10/50">{filteredOrders.map(o => (<tr key={o.id} className="hover:bg-white/5"><td className="px-4 py-3"><div className="font-bold text-white">#{o.provider_id}</div><div className="text-[10px] text-purple-400">@{o.profiles?.username || 'Unknown'}</div><div className="text-[10px] text-slate-400">{new Date(o.created_at).toLocaleDateString()}</div></td><td className="px-4 py-3 text-xs max-w-[200px] truncate">{o.service_name}</td><td className="px-4 py-3 font-mono text-xs max-w-[150px] truncate">{o.target}</td><td className="px-4 py-3"><div className="text-green-400 font-bold">{formatRupiah(o.price)}</div><div className="text-[10px] text-slate-400">Modal: {formatRupiah(o.modal)}</div></td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${String(o.status).toLowerCase().includes('success') ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{o.status}</span></td><td className="px-4 py-3 text-center"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-white/10 text-slate-300 rounded-lg hover:bg-purple-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={14} className="animate-spin"/> : <RefreshCw size={14}/>}</button></td></tr>))}</tbody></table></div>
         </div>
     );
 };
@@ -357,17 +357,17 @@ const DashboardView = ({ profile, onNavigate }) => {
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        <div className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl p-6 md:p-8 border border-indigo-500/30 shadow-lg bg-gradient-to-br from-indigo-900/40 to-slate-900/40">
+        <div className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl p-6 md:p-8 border border-indigo-500/30 shadow-lg bg-gradient-to-br from-indigo-500/25 to-fuchsia-500/10 backdrop-blur-xl">
             <div className="absolute top-0 right-0 p-3 opacity-10"><CreditCard size={120}/></div>
             <p className="text-indigo-200 font-medium mb-1 text-sm md:text-base">Saldo Tersedia</p>
             <h3 className="text-3xl md:text-5xl font-bold text-white tracking-tight mb-6">{formatRupiah(profile.balance || 0)}</h3>
             <button onClick={() => onNavigate('deposit')} className="px-5 py-2.5 bg-white hover:bg-indigo-50 text-indigo-700 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20"><CreditCard size={16}/> Isi Saldo</button>
         </div>
-        <div className="rounded-2xl bg-[#1e293b] border border-slate-700 p-6 flex flex-col justify-center shadow-lg">
+        <div className="rounded-2xl glass border border-white/10 p-6 flex flex-col justify-center shadow-lg">
           <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold">Status Akun</p>
           <h4 className="text-xl font-bold text-green-400 mt-2 flex items-center gap-2"><CheckCircle2 size={20}/> Member Aktif</h4>
-          <div className="mt-4 pt-4 border-t border-slate-700 flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300"><User size={16}/></div>
+          <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-3">
+             <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-slate-300"><User size={16}/></div>
              <p className="text-sm text-slate-300 font-medium">@{profile.username}</p>
           </div>
         </div>
@@ -443,6 +443,20 @@ const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }
   const sellingPricePer1k = modalPrice + ((modalPrice * CONFIG.PROFIT_PERCENTAGE) / 100);
   const totalPrice = quantity ? (sellingPricePer1k / 1000) * quantity : 0;
 
+  // [FITUR BARU] Validasi jumlah sesuai Min/Max layanan + tombol cepat
+  const minQty = parseInt(getVal(currentService, ['min'])) || 1;
+  const maxQtyRaw = parseInt(getVal(currentService, ['max']));
+  const maxQty = Number.isFinite(maxQtyRaw) && maxQtyRaw > 0 ? maxQtyRaw : Infinity;
+  const qtyNum = parseInt(quantity) || 0;
+  const qtyError = currentService && quantity
+    ? (qtyNum < minQty ? `Minimal order ${minQty.toLocaleString('id-ID')}` : qtyNum > maxQty ? `Maksimal order ${maxQty.toLocaleString('id-ID')}` : '')
+    : '';
+  const setMaxAffordable = () => {
+    const affordable = Math.floor(balance / (sellingPricePer1k / 1000));
+    const v = Math.min(affordable, maxQty);
+    if (v >= minQty) setQuantity(String(v)); else toast.error('Saldo tidak cukup untuk order minimal');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -461,31 +475,31 @@ const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
-      <div className="lg:col-span-2 bg-[#1e293b] border border-slate-700 rounded-2xl p-5 md:p-8 shadow-xl">
+      <div className="lg:col-span-2 glass border border-white/10 rounded-2xl p-5 md:p-8 shadow-xl">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ShoppingCart className="text-indigo-400"/> Order Layanan</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
            <div className="relative">
               <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Cari Layanan Cepat</label>
               <div className="relative">
-                  <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
+                  <input type="text" className="w-full bg-black/20 border border-white/15 rounded-xl pl-10 pr-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all" placeholder="Ketik nama layanan (misal: Instagram Like)..." value={searchTerm}
                     onChange={e => { setSearchTerm(e.target.value); setSelectedCatId(''); setSelectedServiceId(''); }} 
                   />
-                  <Search className="absolute left-3.5 top-3.5 text-slate-500 w-5 h-5" />
+                  <Search className="absolute left-3.5 top-3.5 text-slate-400 w-5 h-5" />
               </div>
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div className="md:col-span-2">
                   <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Kategori {searchTerm && '(Difilter)'}</label>
-                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
+                  <select className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" value={selectedCatId} onChange={e => {setSelectedCatId(e.target.value); setSelectedServiceId('')}}>
                       <option value="">-- {categories.length > 0 ? 'Pilih Kategori' : 'Tidak ada hasil'} --</option>
                       {categories.map((c, i) => <option key={i} value={c.id}>{c.name}</option>)}
                   </select>
                </div>
                <div className="md:col-span-2">
                   <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Layanan</label>
-                  <select className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
+                  <select className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" disabled={!selectedCatId} value={selectedServiceId} onChange={e => setSelectedServiceId(e.target.value)}>
                       <option value="">-- Pilih Layanan --</option>
                       {filteredServices.map((s, i) => {
                           const id = getVal(s, srvIdKeys);
@@ -511,29 +525,36 @@ const OrderView = ({ services, balance, onOrder, refreshProfile, prefillSearch }
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Target</label>
-                 <input type="text" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Link / Username" value={target} onChange={e => setTarget(e.target.value)} required />
+                 <input type="text" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Link / Username" value={target} onChange={e => setTarget(e.target.value)} required />
               </div>
               <div>
                  <label className="text-slate-400 text-xs font-semibold uppercase mb-2 block ml-1">Jumlah</label>
-                 <input type="number" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+                 <input type="number" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3.5 text-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Contoh: 1000" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+                 {qtyError && <p className="text-red-400 text-xs mt-1.5 ml-1 font-semibold">{qtyError}</p>}
+                 {currentService && sellingPricePer1k > 0 && (
+                   <div className="flex gap-2 mt-2">
+                     <button type="button" onClick={() => setQuantity(String(minQty))} className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 transition-all">Min {minQty.toLocaleString('id-ID')}</button>
+                     <button type="button" onClick={setMaxAffordable} className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-slate-200 transition-all">Maks Saldo</button>
+                   </div>
+                 )}
               </div>
            </div>
            
-           <div className="pt-6 mt-2 border-t border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+           <div className="pt-6 mt-2 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
              <div className="text-center md:text-left">
                 <p className="text-slate-400 text-xs uppercase font-bold">Total Bayar</p>
                 <p className="text-3xl font-bold text-white tracking-tight">{formatRupiah(totalPrice)}</p>
              </div>
-             <button disabled={loading || totalPrice > balance || totalPrice <= 0} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${totalPrice > balance ? 'bg-slate-700 cursor-not-allowed text-slate-400' : 'bg-indigo-600 hover:bg-indigo-500 text-white hover:scale-105 active:scale-95'}`}>
+             <button disabled={loading || totalPrice > balance || totalPrice <= 0 || !!qtyError} className={`w-full md:w-auto px-8 py-3.5 rounded-xl font-bold text-sm transition-all shadow-lg ${(totalPrice > balance || qtyError) ? 'bg-white/10 cursor-not-allowed text-slate-400' : 'bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white hover:scale-105 active:scale-95'}`}>
                {loading ? <Loader2 className="animate-spin mx-auto"/> : 'BELI SEKARANG'}
              </button>
            </div>
         </form>
       </div>
       <div className="space-y-6">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 shadow-xl">
+        <div className="glass border border-white/10 rounded-2xl p-6 shadow-xl">
            <h4 className="font-bold text-white mb-2 text-yellow-500 flex items-center gap-2"><AlertCircle size={18}/> Info Saldo</h4>
-           <div className="bg-[#0f172a] rounded-xl p-4 border border-slate-600/50 mb-4">
+           <div className="bg-black/20 rounded-xl p-4 border border-white/10 mb-4">
               <p className="text-slate-400 text-xs mb-1">Saldo Tersedia</p>
               <b className="text-white text-xl">{formatRupiah(balance)}</b>
            </div>
@@ -600,26 +621,26 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
         if (s.includes('pending') || s.includes('process')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
         if (s.includes('error') || s.includes('cancel')) return 'bg-red-500/20 text-red-400 border-red-500/30';
         if (s.includes('partial')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-        return 'bg-slate-700 text-slate-300 border-slate-600';
+        return 'bg-white/10 text-slate-300 border-white/15';
     };
 
     return (
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
-            <div className="p-5 md:p-6 border-b border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-500 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
-                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
+        <div className="glass border border-white/10 rounded-2xl overflow-hidden shadow-xl animate-fade-in">
+            <div className="p-5 md:p-6 border-b border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div><h3 className="font-bold text-white text-lg flex items-center gap-2"><History className="text-indigo-400"/> Riwayat Pesanan</h3><p className="text-slate-400 text-xs mt-1">Total: {orders.length} Transaksi</p></div>
+                <button onClick={handleBulkCheck} disabled={isBulkChecking} className="w-full md:w-auto px-4 py-2 bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2">{isBulkChecking ? <Loader2 className="animate-spin" size={14}/> : <RefreshCw size={14}/>}{isBulkChecking ? 'Sedang Sinkronisasi...' : 'Update Status Pending'}</button>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-slate-300 min-w-[700px]">
-                    <thead className="bg-slate-800 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
-                    <tbody className="divide-y divide-slate-700/50">
+                    <thead className="bg-white/10 text-slate-400 uppercase text-[10px] md:text-xs font-bold tracking-wider"><tr><th className="px-6 py-4">ID / Tanggal</th><th className="px-6 py-4">Layanan & Target</th><th className="px-6 py-4">Data Awal</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-center">Aksi</th></tr></thead>
+                    <tbody className="divide-y divide-white/10/50">
                         {orders.map(o => (
-                            <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
-                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-slate-700/50 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-500 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
-                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-slate-900/50 p-1.5 rounded-lg border border-slate-700 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-500">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
-                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-slate-800 px-2 py-0.5 rounded w-fit border border-slate-700">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
+                            <tr key={o.id} className="hover:bg-white/5 transition-colors">
+                                <td className="px-6 py-4"><div className="font-mono font-bold text-white bg-white/5 px-2 py-1 rounded w-fit text-xs">#{o.provider_id || o.id}</div><div className="text-[10px] text-slate-400 mt-1">{new Date(o.created_at).toLocaleDateString()}</div>{o.refill_id && <div className="text-[10px] text-green-400 mt-1 flex items-center gap-1"><RefreshCcw size={10}/> Refill: #{o.refill_id}</div>}</td>
+                                <td className="px-6 py-4"><div className="text-xs text-indigo-300 font-medium mb-1 max-w-[200px] truncate">{o.service_name || 'Layanan'}</div><div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-lg border border-white/10 w-fit max-w-[180px]"><div className="text-[10px] font-mono text-slate-300 truncate">{o.target}</div></div><div className="mt-1 text-[10px] text-slate-400">Jumlah: <b className="text-white">{o.quantity}</b></div></td>
+                                <td className="px-6 py-4"><div className="space-y-1"><div className="text-[10px] bg-white/10 px-2 py-0.5 rounded w-fit border border-white/10">Start: <span className="text-white">{o.start_count !== null ? o.start_count : '-'}</span></div><div className="text-[10px] bg-white/10 px-2 py-0.5 rounded w-fit border border-white/10">Remains: <span className="text-white">{o.remains !== null ? o.remains : '-'}</span></div></div></td>
                                 <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getStatusBadge(o.status)}`}>{o.status}</span></td>
-                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-indigo-600 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-slate-700 text-green-400 rounded-lg hover:bg-green-600 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
+                                <td className="px-6 py-4 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => handleAction('status', o)} disabled={loadingId === o.id} className="p-2 bg-white/10 text-slate-300 rounded-lg hover:brightness-110 hover:text-white transition-all">{loadingId === o.id ? <Loader2 size={16} className="animate-spin"/> : <RefreshCw size={16}/>}</button>{(String(o.status).toLowerCase().includes('success') || String(o.status).toLowerCase().includes('complet')) && (<button onClick={() => handleAction('refill', o)} disabled={loadingId === o.id} className="p-2 bg-white/10 text-green-400 rounded-lg hover:brightness-110 hover:text-white transition-all"><RefreshCcw size={16}/></button>)}</div></td>
                             </tr>
                         ))}
                     </tbody>
@@ -631,7 +652,7 @@ const OrderHistoryView = ({ userId, onCheckStatus, onRefill }) => {
 
 const DepositView = () => (
     <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
-        <div className="bg-[#1e293b] border border-slate-700 rounded-2xl p-6 md:p-8 text-center shadow-xl">
+        <div className="glass border border-white/10 rounded-2xl p-6 md:p-8 text-center shadow-xl">
             <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
                 <CreditCard className="text-indigo-400"/> Deposit QRIS
             </h3>
@@ -643,14 +664,14 @@ const DepositView = () => (
                 <p className="text-slate-900 font-bold mt-2 text-xs tracking-[0.2em]">SCAN ME</p>
             </div>
 
-            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-left text-sm space-y-3 mb-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-left text-sm space-y-3 mb-6">
                 <p className="text-slate-400 text-center text-xs mb-2 uppercase font-bold tracking-wider">Cara Deposit</p>
                 <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">1</div><p className="text-slate-300 text-xs">Screenshot kode QR di atas.</p></div>
                 <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">2</div><p className="text-slate-300 text-xs">Buka E-Wallet (DANA/Gopay) atau M-Banking.</p></div>
                 <div className="flex gap-3"><div className="bg-indigo-500/20 text-indigo-400 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-[10px]">3</div><p className="text-slate-300 text-xs">Scan & Bayar. Min deposit <b>Rp 1.000</b>.</p></div>
             </div>
 
-            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-green-600 hover:bg-green-500 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
+            <button onClick={() => window.open('https://wa.me/6285814866038?text=Halo%20Admin,%20saya%20sudah%20deposit%20via%20QRIS.%20Mohon%20dicek.', '_blank')} className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:brightness-110 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-green-500/20 active:scale-95">
                 <MessageSquare size={18}/> Konfirmasi WhatsApp
             </button>
         </div>
@@ -697,10 +718,10 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4">
-            <div className="w-full max-w-sm bg-[#1e293b] border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl">
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="w-full max-w-sm glass-strong p-6 md:p-8 rounded-3xl">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-1">SosmedKu</h1>
+                    <h1 className="text-3xl font-extrabold mb-1 bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">SosmedKu</h1>
                     <p className="text-slate-400 text-sm">Masuk untuk mengelola pesanan</p>
                 </div>
                 <h2 className="text-lg font-bold text-white mb-4">{isRegister ? 'Buat Akun Baru' : 'Login Member'}</h2>
@@ -719,10 +740,10 @@ const LoginPage = () => {
                 )}
 
                 <form onSubmit={handleAuth} className="space-y-4">
-                    {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
-                    <input type="email" placeholder="Email" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
-                    <input type="password" placeholder="Password Minimal 8 Huruf/Angka" className="w-full bg-[#0f172a] border border-slate-600 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 transition-all" onChange={e => setFormData({...formData, password: e.target.value})} required />
-                    <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : (isRegister ? 'Daftar Sekarang' : 'Masuk Dashboard')}</button>
+                    {isRegister && <><input type="text" placeholder="Nama Lengkap" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400 transition-all" onChange={e => setFormData({...formData, fullname: e.target.value})} required /><input type="text" placeholder="Username (Tanpa Spasi)" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400 transition-all" onChange={e => setFormData({...formData, username: e.target.value})} required /></>}
+                    <input type="email" placeholder="Email" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400 transition-all" onChange={e => setFormData({...formData, email: e.target.value})} required />
+                    <input type="password" placeholder="Password Minimal 8 Huruf/Angka" className="w-full bg-black/20 border border-white/15 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-400 transition-all" onChange={e => setFormData({...formData, password: e.target.value})} required />
+                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95">{loading ? <Loader2 className="animate-spin mx-auto"/> : (isRegister ? 'Daftar Sekarang' : 'Masuk Dashboard')}</button>
                 </form>
                 <button onClick={() => setIsRegister(!isRegister)} className="block w-full text-center text-slate-400 mt-6 text-sm hover:text-white transition-colors">{isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Daftar'}</button>
             </div>
@@ -957,18 +978,18 @@ const App = () => {
   const isAdmin = profile?.username === ADMIN_USERNAME;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans flex overflow-hidden">
+    <div className="min-h-screen text-slate-200 font-sans flex overflow-hidden">
        <Toaster position="top-center" reverseOrder={false} toastOptions={{
-         style: { background: '#1e293b', color: '#fff', border: '1px solid #334155' },
+         style: { background: 'rgba(30,27,75,0.7)', backdropFilter: 'blur(16px)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' },
          success: { iconTheme: { primary: '#22c55e', secondary: '#fff' } },
          error: { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
        }}/>
 
        <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
 
-       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#1e293b] border-r border-slate-700/50 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+       <aside className={`fixed inset-y-0 left-0 z-50 w-64 glass border-r border-white/10 flex flex-col transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className="h-20 flex items-center justify-between px-6 font-bold text-2xl text-white">
-             <span>SosmedKu</span>
+             <span className="bg-gradient-to-r from-sky-400 via-indigo-400 to-fuchsia-400 bg-clip-text text-transparent">SosmedKu</span>
              <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white"><X size={24}/></button>
           </div>
           <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
@@ -979,8 +1000,8 @@ const App = () => {
              <MenuItem icon={<LifeBuoy/>} label="Tiket Bantuan" isActive={activePage === 'ticket'} onClick={() => handleNavigate('ticket')} />
 
              {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-slate-700/50">
-                    <p className="px-4 text-[10px] uppercase text-slate-500 font-bold mb-2">Area Owner</p>
+                <div className="pt-4 mt-4 border-t border-white/10">
+                    <p className="px-4 text-[10px] uppercase text-slate-400 font-bold mb-2">Area Owner</p>
                     <MenuItem icon={<Key/>} label="Kelola Saldo" isActive={activePage === 'admin-saldo'} onClick={() => handleNavigate('admin-saldo')} />
                     <MenuItem icon={<ListOrdered/>} label="Kelola Order" isActive={activePage === 'admin-order'} onClick={() => handleNavigate('admin-order')} />
                     <MenuItem icon={<MessageSquare/>} label="Kelola Tiket" isActive={activePage === 'admin-ticket'} onClick={() => handleNavigate('admin-ticket')} />
@@ -991,11 +1012,11 @@ const App = () => {
           </nav>
        </aside>
 
-       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+       {sidebarOpen && <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
 
        <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          <header className="h-16 md:h-20 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-4 md:px-8">
-             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-slate-800 rounded-lg"><Menu size={24}/></button>
+          <header className="h-16 md:h-20 bg-white/5 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-4 md:px-8">
+             <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-300 p-2 hover:bg-white/10 rounded-lg"><Menu size={24}/></button>
              <div className="flex items-center gap-4 ml-auto">
                 <div className="text-right">
                     <p className="font-bold text-white text-sm md:text-base">{profile?.full_name || 'User'}</p>
